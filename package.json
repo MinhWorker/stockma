@@ -9,7 +9,8 @@
     "lint": "eslint",
     "format": "prettier . --write",
     "format:check": "prettier . --check",
-    "shadcn:add": "npx shadcn@latest` add"
+    "shadcn:add": "npx shadcn@latest` add",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@base-ui/react": "^1.2.0",
