@@ -1,0 +1,177 @@
+'use client';
+
+import { useCallback, useMemo, useState } from 'react';
+import { Search, X, Tag } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
+import { Input } from '@/components/ui/input';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerFooter,
+} from '@/components/ui/drawer';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
+import { deleteCategoryAction } from '@/actions/categories.action';
+import { useDebouncedUrlParam } from '@/hooks/use-debounced-url-param';
+import { CategoryCard } from './category-card';
+import { CategoryFormDrawer } from './category-form-drawer';
+import { Fab } from '../../inventory/_components/fab';
+import type { CategorySummary } from '@/services/types';
+
+interface Props {
+  initialData: CategorySummary[];
+}
+
+export function MobileCategoriesClient({ initialData }: Props) {
+  const t = useTranslations('categories');
+  const tCommon = useTranslations('common');
+
+  const [inputValue, setInputValue, search] = useDebouncedUrlParam('q');
+  const [selected, setSelected] = useState<CategorySummary | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<CategorySummary | undefined>();
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+    return !q ? initialData : initialData.filter((c) => c.name.toLowerCase().includes(q));
+  }, [initialData, search]);
+
+  const handleSelect = useCallback((c: CategorySummary) => {
+    setSelected(c);
+    setDetailOpen(true);
+  }, []);
+  const handleOpenAdd = useCallback(() => {
+    setEditing(undefined);
+    setFormOpen(true);
+  }, []);
+  const handleEdit = useCallback((c: CategorySummary) => {
+    setDetailOpen(false);
+    setEditing(c);
+    setFormOpen(true);
+  }, []);
+
+  const handleDelete = useCallback(
+    async (c: CategorySummary) => {
+      if (c.totalProducts > 0) {
+        toast.error(t('deleteError'));
+        return;
+      }
+      setIsDeleting(true);
+      try {
+        const result = await deleteCategoryAction(c.id);
+        if (!result.success) {
+          toast.error(result.error);
+          return;
+        }
+        toast.success(t('deleteSuccess'));
+        setDetailOpen(false);
+      } finally {
+        setIsDeleting(false);
+      }
+    },
+    [t]
+  );
+
+  return (
+    <>
+      {/* Search */}
+      <div className="relative px-4 py-2">
+        <Search className="absolute left-7 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+        <Input
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+          placeholder={t('searchPlaceholder')}
+          className="pl-9 pr-9 bg-muted border-0 rounded-xl h-10"
+        />
+        {inputValue && (
+          <button
+            onClick={() => setInputValue('')}
+            className="absolute right-7 top-1/2 -translate-y-1/2 text-muted-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+
+      <p className="px-4 pb-1 text-xs text-muted-foreground">{filtered.length} danh mục</p>
+
+      {/* List */}
+      {filtered.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+            <Tag className="h-8 w-8 text-muted-foreground" strokeWidth={1.5} />
+          </div>
+          <div className="space-y-1">
+            <p className="font-medium">{search ? t('emptyFilterTitle') : t('emptyTitle')}</p>
+            <p className="text-sm text-muted-foreground">
+              {search ? t('emptyFilterDesc') : t('emptyDesc')}
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="divide-y divide-border">
+          {filtered.map((c) => (
+            <CategoryCard key={c.id} category={c} onClick={() => handleSelect(c)} />
+          ))}
+        </div>
+      )}
+
+      <Fab onClick={handleOpenAdd} label={t('addCategory')} />
+
+      {/* Detail drawer */}
+      <Drawer open={detailOpen} onOpenChange={setDetailOpen}>
+        <DrawerContent className="max-h-[50vh]">
+          <DrawerHeader>
+            <DrawerTitle>{selected?.name}</DrawerTitle>
+          </DrawerHeader>
+          {selected && (
+            <div className="px-4 divide-y divide-border/60">
+              <div className="flex justify-between py-3 text-sm">
+                <span className="text-muted-foreground">{t('columns.state')}</span>
+                <span className="font-medium">{selected.state}</span>
+              </div>
+              <div className="flex justify-between py-3 text-sm">
+                <span className="text-muted-foreground">{t('columns.products')}</span>
+                <span className="font-medium">{selected.totalProducts}</span>
+              </div>
+            </div>
+          )}
+          <Separator className="mt-2" />
+          <DrawerFooter className="flex-row gap-2">
+            <Button variant="outline" className="flex-1" onClick={() => setDetailOpen(false)}>
+              {tCommon('close')}
+            </Button>
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => selected && handleEdit(selected)}
+            >
+              {tCommon('edit')}
+            </Button>
+            <Button
+              variant="destructive"
+              className="flex-1"
+              onClick={() => selected && handleDelete(selected)}
+              disabled={isDeleting}
+            >
+              {tCommon('delete')}
+            </Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
+
+      {/* Form drawer */}
+      <CategoryFormDrawer
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        category={editing}
+        onSuccess={() => setFormOpen(false)}
+      />
+    </>
+  );
+}

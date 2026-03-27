@@ -1,0 +1,17 @@
+﻿# Các thư mục chứa thư viện
+node_modules/
+
+# Các thư mục build/output
+dist/
+build/
+out/
+
+# Các file log
+*.log
+
+# Các file cấu hình hệ thống hoặc nhạy cảm
+.env*
+.DS_Store
+
+# Các file HTML mẫu hoặc thư viện ngoài
+public/index.html

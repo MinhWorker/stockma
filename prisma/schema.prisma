@@ -1,0 +1,103 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           Int                @id @default(autoincrement())
+  email        String             @unique
+  name         String?
+  transactions StockTransaction[]
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+}
+
+model Inventory {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  description String?
+  items       Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Product {
+  id               Int                @id @default(autoincrement())
+  name             String             @unique
+  shortDescription String?
+  description      String?
+  imageUrl         String?
+  brand            String?
+  // costPrice: gia nhap, dung de tinh doanh thu (ban - nhap)
+  costPrice        Int
+  // price: gia ban le
+  price            Int
+  // reorderLevel: nguong ton kho toi thieu, duoi muc nay la "low_stock"
+  reorderLevel     Int                @default(0)
+  categoryId       Int
+  category         ProductCategory    @relation(fields: [categoryId], references: [id])
+  providerId       Int
+  provider         Provider           @relation(fields: [providerId], references: [id])
+  inventoryId      Int
+  inventory        Inventory          @relation(fields: [inventoryId], references: [id])
+  transactions     StockTransaction[]
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+}
+
+model ProductCategory {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  products  Product[]
+  state     String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Provider {
+  id           Int       @id @default(autoincrement())
+  name         String    @unique
+  provideItems Product[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+// StockTransaction ghi lai moi lan nhap/xuat/dieu chinh kho.
+// Ton kho hien tai = SUM(quantity) cua tat ca transactions theo productId,
+// trong do stock_in va adjustment la duong, stock_out la am.
+model StockTransaction {
+  id         Int             @id @default(autoincrement())
+  type       TransactionType
+  // quantity: so duong cho stock_in/adjustment, so am cho stock_out
+  quantity   Int
+  // stockBefore / stockAfter: snapshot tai thoi diem giao dich
+  stockBefore Int
+  stockAfter  Int
+  note       String?
+  productId  Int
+  product    Product         @relation(fields: [productId], references: [id])
+  userId     Int
+  user       User            @relation(fields: [userId], references: [id])
+  createdAt  DateTime        @default(now())
+}
+
+enum TransactionType {
+  stock_in
+  stock_out
+  adjustment
+}
+
+// System
+model ModelState {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
