@@ -41,3 +41,14 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+
+# IDE directories
+.vscode
+.idea
+
+# AI IDE directories
+.kiro/
+.claude/
+.agents/
+.cursor/
+.windsurf/
