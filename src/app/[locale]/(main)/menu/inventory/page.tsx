@@ -3,8 +3,8 @@ import { getTranslations } from 'next-intl/server';
 import { getTransactions } from '@/services/transaction.service';
 import { MobileInventoryClient } from './_components/mobile-inventory-client';
 
-// async-suspense-boundaries: page renders title immediately,
-// data streams in via Suspense
+export const dynamic = 'force-dynamic';
+
 export default async function MobileInventoryPage() {
   const t = await getTranslations('inventory');
   const transactionsPromise = getTransactions();
@@ -19,7 +19,6 @@ export default async function MobileInventoryPage() {
   );
 }
 
-// Async server component — fetches and passes data down (server-parallel-fetching)
 async function InventoryData({
   transactionsPromise,
 }: {
@@ -30,16 +29,26 @@ async function InventoryData({
 }
 
 function InventorySkeleton() {
-return (
-    <div className="space-y-px bg-background">
+  return (
+    <div className="space-y-px">
       {Array.from({ length: 8 }).map((_, i) => (
-        <div key={i} className="flex items-center gap-3 px-4 py-3 bg-card border-b border-border">
-          <div className="h-10 w-10 rounded-full animate-shimmer bg-muted shrink-0" />
+        <div key={i} className="flex items-center gap-3 px-4 py-3 border-b border-border">
+          {/* Avatar / type icon */}
+          <div className="h-10 w-10 rounded-full animate-shimmer shrink-0" />
           <div className="flex-1 space-y-2">
-            <div className="h-3 w-2/3 rounded animate-shimmer bg-muted" />
-            <div className="h-2.5 w-1/2 rounded animate-shimmer bg-muted" />
+            {/* Product name */}
+            <div className="h-3 w-3/5 rounded-md animate-shimmer" />
+            {/* Date + type badge */}
+            <div className="flex items-center gap-2">
+              <div className="h-2.5 w-16 rounded-md animate-shimmer" />
+              <div className="h-4 w-12 rounded-full animate-shimmer" />
+            </div>
           </div>
-          <div className="h-3 w-8 rounded animate-shimmer bg-muted" />
+          {/* Quantity */}
+          <div className="flex flex-col items-end gap-1.5 shrink-0">
+            <div className="h-3 w-8 rounded-md animate-shimmer" />
+            <div className="h-2.5 w-12 rounded-md animate-shimmer" />
+          </div>
         </div>
       ))}
     </div>

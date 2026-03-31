@@ -3,8 +3,6 @@ import { getTranslations } from 'next-intl/server';
 import { getDashboardStats } from '@/services/dashboard.service';
 import { MobileDashboardClient } from './_components/mobile-dashboard-client';
 
-// async-parallel: translations and title render immediately,
-// stats stream in via Suspense
 export default async function MobileDashboardPage() {
   const t = await getTranslations('dashboard');
   const statsPromise = getDashboardStats();
@@ -27,30 +25,37 @@ async function DashboardData({ statsPromise }: { statsPromise: ReturnType<typeof
 function DashboardSkeleton() {
   return (
     <div className="space-y-6 pb-4">
-      <section>
-        <div className="divide-y divide-border/60 rounded-2xl border border-border overflow-hidden mx-4">
+      {/* Stats cards */}
+      <section className="mx-4">
+        <div className="divide-y divide-border/60 rounded-2xl border border-border overflow-hidden">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="flex items-center gap-4 px-4 py-3.5">
               <div className="h-10 w-10 rounded-xl animate-shimmer shrink-0" />
               <div className="flex-1 space-y-2">
-                <div className="h-2.5 w-24 rounded animate-shimmer" />
-                <div className="h-5 w-16 rounded animate-shimmer" />
+                <div className="h-2.5 w-20 rounded-md animate-shimmer" />
+                <div className="h-5 w-14 rounded-md animate-shimmer" />
               </div>
+              <div className="h-4 w-10 rounded-md animate-shimmer" />
             </div>
           ))}
         </div>
       </section>
-      <section className="space-y-2">
-        <div className="px-4 h-3 w-32 rounded animate-shimmer" />
+
+      {/* Recent transactions */}
+      <section className="space-y-1">
+        <div className="px-4 mb-2 h-3 w-36 rounded-md animate-shimmer" />
         <div className="space-y-px">
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="flex items-center gap-3 px-4 py-3">
               <div className="h-10 w-10 rounded-full animate-shimmer shrink-0" />
               <div className="flex-1 space-y-2">
-                <div className="h-3 w-2/3 rounded animate-shimmer" />
-                <div className="h-2.5 w-1/3 rounded animate-shimmer" />
+                <div className="h-3 w-2/3 rounded-md animate-shimmer" />
+                <div className="h-2.5 w-1/3 rounded-md animate-shimmer" />
               </div>
-              <div className="h-3 w-8 rounded animate-shimmer" />
+              <div className="flex flex-col items-end gap-1.5">
+                <div className="h-3 w-12 rounded-md animate-shimmer" />
+                <div className="h-2.5 w-8 rounded-full animate-shimmer" />
+              </div>
             </div>
           ))}
         </div>
