@@ -6,10 +6,13 @@ export const auth = betterAuth({
   database: prismaAdapter(prisma, { provider: 'postgresql' }),
   emailAndPassword: { enabled: true },
   session: {
-    expiresIn: 60 * 60 * 24 * 30, // 30 days
+    expiresIn: 60 * 60 * 24 * 30,
     updateAge: 60 * 60 * 24,
   },
-  trustedOrigins: [process.env.BETTER_AUTH_URL!],
+  trustedOrigins: [
+    process.env.BETTER_AUTH_URL!,
+    process.env.NEXT_PUBLIC_APP_URL!,
+  ].filter(Boolean),
 });
 
 export type Session = typeof auth.$Infer.Session;
