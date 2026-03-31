@@ -4,8 +4,10 @@ import { routing } from './i18n/routing';
 
 const intlMiddleware = createIntlMiddleware(routing);
 
-// Better Auth session cookie name
-const SESSION_COOKIE = 'better-auth.session_token';
+// Better Auth uses __Secure- prefix on HTTPS (production), plain name on HTTP (dev)
+const SESSION_COOKIE = process.env.NODE_ENV === 'production'
+  ? '__Secure-better-auth.session_token'
+  : 'better-auth.session_token';
 
 const PUBLIC_PATHS = ['/login'];
 
