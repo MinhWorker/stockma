@@ -15,9 +15,11 @@ import {
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { generateReportAction, type ReportType, type ReportRow } from '@/actions/reports.action';
+import { getErrorKey } from '@/lib/error-message';
 
 export function MobileReportsClient() {
   const t = useTranslations('reports');
+  const tCommon = useTranslations('common');
 
   const [reportType, setReportType] = useState<ReportType | ''>('');
   const [dateFrom, setDateFrom] = useState('');
@@ -36,7 +38,7 @@ export function MobileReportsClient() {
         dateTo: dateTo || undefined,
       });
       if (!result.success) {
-        toast.error(result.error);
+        toast.error(tCommon(getErrorKey(result.error)));
         return;
       }
       setRows(result.data ?? []);

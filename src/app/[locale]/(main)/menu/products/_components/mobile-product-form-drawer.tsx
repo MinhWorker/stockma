@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useTransition, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslations } from 'next-intl';
@@ -22,9 +23,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { FormField } from '@/components/forms/form-field';
-import { createProductAction, updateProductAction } from '@/actions/products.action';
-import { getCategoriesAction } from '@/actions/categories.action';
-import type { ProductSummary, CategorySummary } from '@/services/types';
+import { createProductAction, updateProductAction, getProductFormDataAction } from '@/actions/products.action';
+import { getErrorKey } from '@/lib/error-message';
+import type { ProductSummary, CategorySummary, ProviderSummary, InventorySummary } from '@/services/types';
 
 interface FormValues {
   name: string;
@@ -32,12 +33,14 @@ interface FormValues {
   price: number;
   reorderLevel: number;
   categoryId: number;
+  providerId: number;
+  inventoryId: number;
   description: string;
 }
 type Errors = Partial<Record<keyof FormValues, string>>;
 
 function empty(): FormValues {
-  return { name: '', costPrice: 0, price: 0, reorderLevel: 5, categoryId: 0, description: '' };
+  return { name: '', costPrice: 0, price: 0, reorderLevel: 5, categoryId: 0, providerId: 0, inventoryId: 0, description: '' };
 }
 function fromProduct(p: ProductSummary): FormValues {
   return {
@@ -46,6 +49,8 @@ function fromProduct(p: ProductSummary): FormValues {
     price: p.price,
     reorderLevel: p.reorderLevel,
     categoryId: p.categoryId,
+    providerId: p.providerId,
+    inventoryId: p.inventoryId,
     description: p.shortDescription ?? '',
   };
 }
@@ -60,6 +65,8 @@ interface Props {
 export function MobileProductFormDrawer({ open, onOpenChange, product, onSuccess }: Props) {
   const t = useTranslations('products');
   const tCommon = useTranslations('common');
+  const router = useRouter();
+  const [, startTransition] = useTransition();
 
   const nameId = useId();
   const costId = useId();
@@ -71,9 +78,15 @@ export function MobileProductFormDrawer({ open, onOpenChange, product, onSuccess
   const [errors, setErrors] = useState<Errors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [categories, setCategories] = useState<CategorySummary[]>([]);
+  const [providers, setProviders] = useState<ProviderSummary[]>([]);
+  const [inventories, setInventories] = useState<InventorySummary[]>([]);
 
   useEffect(() => {
-    getCategoriesAction().then(setCategories);
+    getProductFormDataAction().then(({ categories, providers, inventories }) => {
+      setCategories(categories);
+      setProviders(providers);
+      setInventories(inventories);
+    });
   }, []);
 
   useEffect(() => {
@@ -92,6 +105,8 @@ export function MobileProductFormDrawer({ open, onOpenChange, product, onSuccess
     const e: Errors = {};
     if (!values.name.trim()) e.name = tCommon('required');
     if (!values.categoryId) e.categoryId = tCommon('required');
+    if (!values.providerId) e.providerId = tCommon('required');
+    if (!values.inventoryId) e.inventoryId = tCommon('required');
     if (!values.costPrice || values.costPrice <= 0) e.costPrice = tCommon('required');
     if (!values.price || values.price <= 0) e.price = tCommon('required');
     return e;
@@ -112,6 +127,8 @@ export function MobileProductFormDrawer({ open, onOpenChange, product, onSuccess
             price: values.price,
             reorderLevel: values.reorderLevel,
             categoryId: values.categoryId,
+            providerId: values.providerId,
+            inventoryId: values.inventoryId,
             shortDescription: values.description,
           })
         : await createProductAction({
@@ -120,17 +137,21 @@ export function MobileProductFormDrawer({ open, onOpenChange, product, onSuccess
             price: values.price,
             reorderLevel: values.reorderLevel,
             categoryId: values.categoryId,
-            providerId: 1,
-            inventoryId: 1,
+            providerId: values.providerId,
+            inventoryId: values.inventoryId,
             shortDescription: values.description,
           });
       if (!result.success) {
-        toast.error(result.error);
+        toast.error(tCommon(getErrorKey(result.error)));
         return;
       }
       toast.success(t('saveSuccess'));
       onSuccess();
       onOpenChange(false);
+      console.log('[product-form] mutation done → calling router.refresh()');
+      startTransition(() => router.refresh());
+    } catch {
+      toast.error(tCommon('error'));
     } finally {
       setIsSubmitting(false);
     }
@@ -164,6 +185,40 @@ export function MobileProductFormDrawer({ open, onOpenChange, product, onSuccess
                 {categories.map((c) => (
                   <SelectItem key={c.id} value={String(c.id)}>
                     {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormField>
+          <FormField label={t('form.provider')} required error={errors.providerId}>
+            <Select
+              value={values.providerId ? String(values.providerId) : ''}
+              onValueChange={(v) => set('providerId', Number(v))}
+            >
+              <SelectTrigger className="w-full" aria-invalid={!!errors.providerId}>
+                <SelectValue placeholder={t('form.providerPlaceholder')} />
+              </SelectTrigger>
+              <SelectContent>
+                {providers.map((p) => (
+                  <SelectItem key={p.id} value={String(p.id)}>
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormField>
+          <FormField label={t('form.inventory')} required error={errors.inventoryId}>
+            <Select
+              value={values.inventoryId ? String(values.inventoryId) : ''}
+              onValueChange={(v) => set('inventoryId', Number(v))}
+            >
+              <SelectTrigger className="w-full" aria-invalid={!!errors.inventoryId}>
+                <SelectValue placeholder={t('form.inventoryPlaceholder')} />
+              </SelectTrigger>
+              <SelectContent>
+                {inventories.map((inv) => (
+                  <SelectItem key={inv.id} value={String(inv.id)}>
+                    {inv.name}
                   </SelectItem>
                 ))}
               </SelectContent>

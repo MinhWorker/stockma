@@ -7,18 +7,20 @@ import { MobileDashboardClient } from './_components/mobile-dashboard-client';
 // stats stream in via Suspense
 export default async function MobileDashboardPage() {
   const t = await getTranslations('dashboard');
+  const statsPromise = getDashboardStats();
+
   return (
     <div className="space-y-0">
       <h1 className="px-4 pt-1 pb-3 text-xl font-semibold">{t('title')}</h1>
       <Suspense fallback={<DashboardSkeleton />}>
-        <DashboardData />
+        <DashboardData statsPromise={statsPromise} />
       </Suspense>
     </div>
   );
 }
 
-async function DashboardData() {
-  const stats = await getDashboardStats();
+async function DashboardData({ statsPromise }: { statsPromise: ReturnType<typeof getDashboardStats> }) {
+  const stats = await statsPromise;
   return <MobileDashboardClient stats={stats} />;
 }
 

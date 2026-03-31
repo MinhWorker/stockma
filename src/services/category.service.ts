@@ -1,7 +1,10 @@
 import 'server-only';
 import { cache } from 'react';
 import { prisma } from '@/lib/db';
+import { requireNonEmpty } from './validation';
 import type { CategorySummary } from './types';
+
+const VALID_STATES = ['active', 'inactive'];
 
 // ---------------------------------------------------------------------------
 // Queries
@@ -50,6 +53,8 @@ export async function createCategory(data: {
   name: string;
   state: string;
 }): Promise<CategorySummary> {
+  requireNonEmpty(data.name, 'Category name');
+  if (!VALID_STATES.includes(data.state)) throw new Error(`Invalid state: ${data.state}`);
   const category = await prisma.productCategory.create({ data });
   return {
     id: category.id,
@@ -65,6 +70,9 @@ export async function updateCategory(
   id: number,
   data: { name?: string; state?: string }
 ): Promise<CategorySummary> {
+  if (data.name !== undefined) requireNonEmpty(data.name, 'Category name');
+  if (data.state !== undefined && !VALID_STATES.includes(data.state))
+    throw new Error(`Invalid state: ${data.state}`);
   const category = await prisma.productCategory.update({ where: { id }, data });
   return {
     id: category.id,
@@ -79,7 +87,7 @@ export async function updateCategory(
 export async function deleteCategory(id: number): Promise<void> {
   const productCount = await prisma.product.count({ where: { categoryId: id } });
   if (productCount > 0) {
-    throw new Error(`Cannot delete category ${id}: it is linked to ${productCount} products.`);
+    throw new Error('ERR_HAS_PRODUCTS');
   }
   await prisma.productCategory.delete({ where: { id } });
 }

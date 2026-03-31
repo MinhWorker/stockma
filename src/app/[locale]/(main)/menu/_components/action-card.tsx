@@ -16,6 +16,7 @@ import {
   ArrowLeftRight,
   Settings,
   Tag,
+  Truck,
   HelpCircle,
   type LucideIcon,
 } from 'lucide-react';
@@ -28,6 +29,7 @@ const ICON_BY_ID: Record<string, LucideIcon> = {
   products: Package,
   'add-product': PackagePlus,
   categories: Tag,
+  providers: Truck,
   dashboard: LayoutDashboard,
   reports: BarChart3,
   transactions: ArrowLeftRight,

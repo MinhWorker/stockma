@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Search, X, Package } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Input } from '@/components/ui/input';
@@ -41,6 +41,7 @@ function ProductsShell({ initialData }: { initialData: ProductSummary[] }) {
   const { state, actions } = useProducts();
 
   const filtered = useMemo(() => {
+    console.log('[ProductsShell] recomputing filtered, initialData length:', initialData.length, 'first item:', initialData[0]?.name, initialData[0]?.price);
     const q = state.search.toLowerCase();
     return initialData.filter((p) => {
       const matchSearch = !q || p.name.toLowerCase().includes(q);
@@ -50,6 +51,10 @@ function ProductsShell({ initialData }: { initialData: ProductSummary[] }) {
   }, [initialData, state.search, state.statusFilter]);
 
   const hasFilters = state.search !== '' || state.statusFilter !== 'all';
+
+  const handleDetailClose = useCallback((open: boolean) => { if (!open) actions.closeDetail(); }, [actions]);
+  const handleFormClose = useCallback((open: boolean) => { if (!open) actions.closeForm(); }, [actions]);
+  const handleFormSuccess = useCallback(() => actions.closeForm(), [actions]);
 
   return (
     <>
@@ -126,15 +131,15 @@ function ProductsShell({ initialData }: { initialData: ProductSummary[] }) {
       <ProductDetailDrawer
         product={state.selectedProduct}
         open={state.detailOpen}
-        onOpenChange={(open) => !open && actions.closeDetail()}
-        onEdit={(p) => actions.openEdit(p)}
+        onOpenChange={handleDetailClose}
+        onEdit={actions.openEdit}
       />
 
       <MobileProductFormDrawer
         open={state.formOpen}
-        onOpenChange={(open) => !open && actions.closeForm()}
+        onOpenChange={handleFormClose}
         product={state.editingProduct}
-        onSuccess={() => actions.closeForm()}
+        onSuccess={handleFormSuccess}
       />
     </>
   );

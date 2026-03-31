@@ -22,8 +22,8 @@ export function AdjustmentClient() {
     isSubmitting,
     done,
     products,
-    productSearch,
-    setProductSearch,
+    productInputValue,
+    handleProductSearch,
     selectedProduct,
     set,
     handleSubmit,
@@ -63,15 +63,12 @@ export function AdjustmentClient() {
       <FormField label={t('form.product')} required error={errors.productId}>
         <Combobox
           value={values.productId || null}
-          onValueChange={(v) => {
-            set('productId', v as number);
-            setProductSearch('');
-          }}
+          onValueChange={(v) => set('productId', v as number)}
         >
           <ComboboxInput
             placeholder={t('form.productPlaceholder')}
-            value={productSearch}
-            onChange={(e) => setProductSearch(e.target.value)}
+            value={productInputValue}
+            onChange={(e) => handleProductSearch(e.target.value)}
             aria-invalid={!!errors.productId}
           />
           <ComboboxContent>

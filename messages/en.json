@@ -43,18 +43,27 @@
     "deleting": "Deleting...",
     "submitting": "Submitting...",
     "success": "Success",
-    "error": "Error",
+    "error": "Something went wrong",
     "warning": "Warning",
-    "info": "Info"
+    "info": "Info",
+    "errInsufficientStock": "Insufficient stock",
+    "errHasProducts": "Cannot delete: has linked products",
+    "errHasTransactions": "Cannot delete: has linked transactions",
+    "errPriceBelowCost": "Retail price must be ≥ cost price"
   },
   "auth": {
     "signIn": "Sign In",
     "signOut": "Sign Out",
     "welcomeBack": "Welcome back",
+    "loginSubtitle": "Sign in to your account",
+    "login": "Sign In",
+    "loggingIn": "Signing in...",
+    "loginError": "Invalid email or password",
+    "email": "Email",
+    "password": "Password",
     "pickAccountDescription": "Select an account to continue",
     "createAccountTitle": "Create Account",
     "createAccountDescription": "Enter your email to get started",
-    "email": "Email",
     "emailPlaceholder": "you@example.com",
     "name": "Name",
     "namePlaceholder": "Your name",
@@ -104,6 +113,10 @@
       "categoryPlaceholder": "Select category",
       "description": "Description",
       "descriptionPlaceholder": "Enter product description",
+      "provider": "Provider",
+      "providerPlaceholder": "Select provider",
+      "inventory": "Inventory",
+      "inventoryPlaceholder": "Select inventory",
       "costPrice": "Cost Price",
       "retailPrice": "Retail Price",
       "reorderLevel": "Reorder Level",
@@ -252,7 +265,13 @@
       "stockOutDesc": "Receive notifications when products are out of stock",
       "newTransaction": "New Transaction Alert",
       "newTransactionDesc": "Receive notifications for each new inventory transaction",
-      "saveSuccess": "Notification settings saved"
+      "saveSuccess": "Notification settings saved",
+      "subscribe": "Enable Push Notifications",
+      "unsubscribe": "Disable Push Notifications",
+      "subscribed": "Push notifications enabled",
+      "unsubscribed": "Push notifications disabled",
+      "notSubscribed": "Enable notifications first",
+      "permissionDenied": "Notification permission denied"
     },
     "users": {
       "title": "User Management",
@@ -327,9 +346,47 @@
       "reportsDesc": "Generate and download reports",
       "transactions": "Transactions",
       "transactionsDesc": "Full transaction history",
+      "providers": "Providers",
+      "providersDesc": "Manage suppliers and providers",
       "settings": "Settings",
       "settingsDesc": "Configure app and account"
     }
+  },
+  "inventorySetup": {
+    "title": "Warehouses",
+    "addInventory": "Add Warehouse",
+    "editInventory": "Edit Warehouse",
+    "products": "products",
+    "form": {
+      "name": "Warehouse Name",
+      "namePlaceholder": "e.g. Main Warehouse…",
+      "description": "Description",
+      "descriptionPlaceholder": "Optional description…"
+    },
+    "saveSuccess": "Warehouse saved",
+    "deleteSuccess": "Warehouse deleted",
+    "deleteError": "Cannot delete a warehouse that has products",
+    "emptyDesc": "No warehouses yet. Add one to get started."
+  },
+  "providers": {
+    "title": "Providers",
+    "addProvider": "Add Provider",
+    "editProvider": "Edit Provider",
+    "searchPlaceholder": "Search by name...",
+    "countLabel": "providers",
+    "columns": { "products": "Products" },
+    "form": {
+      "name": "Provider Name",
+      "namePlaceholder": "Enter provider name"
+    },
+    "deleteConfirmTitle": "Delete Provider",
+    "saveSuccess": "Provider saved successfully",
+    "deleteSuccess": "Provider deleted successfully",
+    "deleteError": "Cannot delete a provider that has products",
+    "emptyTitle": "No providers yet",
+    "emptyDesc": "Add your first provider to get started",
+    "emptyFilterTitle": "No providers found",
+    "emptyFilterDesc": "Try adjusting your search criteria"
   },
   "categories": {
     "title": "Categories",
@@ -356,6 +413,13 @@
     "emptyDesc": "Add your first category to get started",
     "emptyFilterTitle": "No categories found",
     "emptyFilterDesc": "Try adjusting your search criteria"
+  },
+  "errors": {
+    "insufficientStock": "Insufficient stock",
+    "hasProducts": "Cannot delete: has linked products",
+    "hasTransactions": "Cannot delete: has linked transactions",
+    "priceBelowCost": "Retail price must be ≥ cost price",
+    "unknown": "Something went wrong, please try again"
   },
   "loading": {
     "message": "Loading..."

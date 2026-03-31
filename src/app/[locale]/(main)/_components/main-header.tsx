@@ -21,7 +21,7 @@ export function MainHeader() {
 
   function handleBack() {
     if (backTo) router.push(backTo as Parameters<typeof router.push>[0]);
-    else router.back();
+    else router.push(MENU_ROOT);
   }
 
   return (

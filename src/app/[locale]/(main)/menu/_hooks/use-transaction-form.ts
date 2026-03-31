@@ -6,6 +6,8 @@ import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { getProductsAction } from '@/actions/products.action';
 import { createTransactionAction } from '@/actions/inventory.action';
+import { useSession } from '@/lib/auth-client';
+import { getErrorKey } from '@/lib/error-message';
 import type { ProductSummary } from '@/services/types';
 import type { TransactionFormValues, TransactionType } from '@/types/transaction';
 
@@ -17,6 +19,7 @@ export function useTransactionForm(defaultType: TransactionType) {
   const t = useTranslations('inventory');
   const tCommon = useTranslations('common');
   const router = useRouter();
+  const { data: session } = useSession();
 
   const quantityId = useId();
   const noteId = useId();
@@ -32,11 +35,6 @@ export function useTransactionForm(defaultType: TransactionType) {
     getProductsAction().then(setProducts);
   }, []);
 
-  // Derived — no state needed (rerender-derived-state-no-effect)
-  const filteredProducts = productSearch
-    ? products.filter((p) => p.name.toLowerCase().includes(productSearch.toLowerCase()))
-    : products;
-
   const selectedProduct = products.find((p) => p.id === values.productId);
 
   // Stable — uses functional setState, no state deps (rerender-functional-setstate)
@@ -47,6 +45,21 @@ export function useTransactionForm(defaultType: TransactionType) {
     },
     []
   );
+
+  // Show selected product name in input when not actively searching
+  const productInputValue = values.productId && !productSearch
+    ? (selectedProduct?.name ?? '')
+    : productSearch;
+
+  const handleProductSearch = useCallback((v: string) => {
+    setProductSearch(v);
+    if (!v) set('productId', 0);
+  }, [set]);
+
+  // Derived — no state needed (rerender-derived-state-no-effect)
+  const filteredProducts = productSearch
+    ? products.filter((p) => p.name.toLowerCase().includes(productSearch.toLowerCase()))
+    : products;
 
   const handleSubmit = useCallback(async () => {
     // Read latest values via functional setState to avoid stale closure
@@ -73,15 +86,20 @@ export function useTransactionForm(defaultType: TransactionType) {
         productId: current.productId,
         quantity: current.quantity,
         note: current.note,
-        userId: 1, // TODO: replace with session user id
+        userId: session?.user?.id ?? '',
       });
-      if (!result.success) throw new Error(result.error);
+      if (!result.success) {
+        toast.error(tCommon(getErrorKey(result.error)));
+        return;
+      }
       toast.success(t('submitSuccess'));
       setDone(true);
+    } catch {
+      toast.error(tCommon('error'));
     } finally {
       setIsSubmitting(false);
     }
-  }, [t, tCommon]);
+  }, [t, tCommon, session]);
 
   const handleReset = useCallback(() => {
     setValues(emptyValues(defaultType));
@@ -104,7 +122,9 @@ export function useTransactionForm(defaultType: TransactionType) {
     done,
     products: filteredProducts,
     productSearch,
+    productInputValue,
     setProductSearch,
+    handleProductSearch,
     selectedProduct,
     set,
     handleSubmit,

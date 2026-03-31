@@ -11,12 +11,55 @@ datasource db {
 }
 
 model User {
-  id           Int                @id @default(autoincrement())
-  email        String             @unique
-  name         String?
-  transactions StockTransaction[]
-  createdAt    DateTime           @default(now())
-  updatedAt    DateTime           @updatedAt
+  id                String             @id @default(cuid())
+  email             String             @unique
+  name              String?
+  emailVerified     Boolean            @default(false)
+  image             String?
+  transactions      StockTransaction[]
+  pushSubscriptions PushSubscription[]
+  sessions          Session[]
+  accounts          Account[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 model Inventory {
@@ -83,7 +126,7 @@ model StockTransaction {
   note       String?
   productId  Int
   product    Product         @relation(fields: [productId], references: [id])
-  userId     Int
+  userId     String
   user       User            @relation(fields: [userId], references: [id])
   createdAt  DateTime        @default(now())
 }
@@ -92,6 +135,22 @@ enum TransactionType {
   stock_in
   stock_out
   adjustment
+}
+
+// Push notification subscriptions per user
+model PushSubscription {
+  id        Int      @id @default(autoincrement())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  // Notification preferences
+  lowStock        Boolean @default(true)
+  stockOut        Boolean @default(true)
+  newTransaction  Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // System

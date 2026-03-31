@@ -75,6 +75,13 @@ export const ACTION_GROUPS: ActionGroup[] = [
         href: '/menu/categories',
         color: 'bg-pink-500',
       },
+      {
+        id: 'providers',
+        labelKey: 'providers',
+        descriptionKey: 'providersDesc',
+        href: '/menu/providers',
+        color: 'bg-orange-500',
+      },
     ],
   },
   {

@@ -1,7 +1,57 @@
-import createMiddleware from 'next-intl/middleware';
+import { NextResponse, type NextRequest } from 'next/server';
+import createIntlMiddleware from 'next-intl/middleware';
 import { routing } from './i18n/routing';
 
-export default createMiddleware(routing);
+const intlMiddleware = createIntlMiddleware(routing);
+
+// Better Auth session cookie name
+const SESSION_COOKIE = 'better-auth.session_token';
+
+const PUBLIC_PATHS = ['/login'];
+
+function isPublicPath(pathname: string): boolean {
+  const stripped = pathname.replace(/^\/(vi|en)/, '') || '/';
+  return PUBLIC_PATHS.some((p) => stripped === p || stripped.startsWith(p + '/'));
+}
+
+export function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // Always allow internals, API, and static files
+  if (
+    pathname.startsWith('/api') ||
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/_vercel') ||
+    pathname === '/sw.js' ||
+    pathname === '/favicon.ico' ||
+    /\.\w+$/.test(pathname)
+  ) {
+    return NextResponse.next();
+  }
+
+  // Run intl middleware first
+  const intlResponse = intlMiddleware(request);
+
+  if (isPublicPath(pathname)) return intlResponse;
+
+  // Check session cookie — no HTTP round-trip needed
+  const hasSession = request.cookies.has(SESSION_COOKIE);
+
+  console.log(`[proxy] ${pathname} | session=${hasSession}`);
+
+  if (!hasSession) {
+    const segments = pathname.split('/');
+    const locale = routing.locales.includes(segments[1] as 'vi' | 'en')
+      ? segments[1]
+      : routing.defaultLocale;
+    const loginUrl = new URL(`/${locale}/login`, request.nextUrl.origin);
+    loginUrl.searchParams.set('callbackUrl', pathname);
+    console.log(`[proxy] no session → redirect to ${loginUrl.pathname}`);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  return intlResponse;
+}
 
 export const config = {
   matcher: ['/', '/(vi|en)/:path*'],

@@ -23,6 +23,7 @@ export default async function MenuPage() {
       products: { label: t('actions.products'), description: t('actions.productsDesc') },
       'add-product': { label: t('actions.addProduct'), description: t('actions.addProductDesc') },
       categories: { label: t('actions.categories'), description: t('actions.categoriesDesc') },
+      providers: { label: t('actions.providers'), description: t('actions.providersDesc') },
     },
     analytics: {
       dashboard: { label: t('actions.dashboard'), description: t('actions.dashboardDesc') },

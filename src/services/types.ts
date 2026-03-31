@@ -77,7 +77,7 @@ export interface TransactionRecord {
   note: string | null;
   productId: number;
   productName: string;
-  userId: number;
+  userId: string;
   userName: string | null;
   createdAt: Date;
 }
@@ -87,7 +87,7 @@ export interface CreateTransactionInput {
   quantity: number;
   note?: string;
   productId: number;
-  userId: number;
+  userId: string;
 }
 
 // ---------------------------------------------------------------------------

@@ -1,6 +1,7 @@
 import 'server-only';
 import { cache } from 'react';
 import { prisma } from '@/lib/db';
+import { requireNonEmpty } from './validation';
 import type { ProviderSummary } from './types';
 
 // ---------------------------------------------------------------------------
@@ -45,6 +46,7 @@ export const getProviderById = cache(async (id: number): Promise<ProviderSummary
 // ---------------------------------------------------------------------------
 
 export async function createProvider(data: { name: string }): Promise<ProviderSummary> {
+  requireNonEmpty(data.name, 'Provider name');
   const provider = await prisma.provider.create({ data });
   return {
     id: provider.id,
@@ -56,6 +58,7 @@ export async function createProvider(data: { name: string }): Promise<ProviderSu
 }
 
 export async function updateProvider(id: number, data: { name: string }): Promise<ProviderSummary> {
+  requireNonEmpty(data.name, 'Provider name');
   const provider = await prisma.provider.update({ where: { id }, data });
   return {
     id: provider.id,
@@ -69,7 +72,7 @@ export async function updateProvider(id: number, data: { name: string }): Promis
 export async function deleteProvider(id: number): Promise<void> {
   const productCount = await prisma.product.count({ where: { providerId: id } });
   if (productCount > 0) {
-    throw new Error(`Cannot delete provider ${id}: it is linked to ${productCount} products.`);
+    throw new Error('ERR_HAS_PRODUCTS');
   }
   await prisma.provider.delete({ where: { id } });
 }

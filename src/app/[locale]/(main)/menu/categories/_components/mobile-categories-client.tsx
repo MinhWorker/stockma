@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { Search, X, Tag } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
@@ -15,6 +16,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { deleteCategoryAction } from '@/actions/categories.action';
+import { getErrorKey } from '@/lib/error-message';
 import { useDebouncedUrlParam } from '@/hooks/use-debounced-url-param';
 import { CategoryCard } from './category-card';
 import { CategoryFormDrawer } from './category-form-drawer';
@@ -28,6 +30,8 @@ interface Props {
 export function MobileCategoriesClient({ initialData }: Props) {
   const t = useTranslations('categories');
   const tCommon = useTranslations('common');
+  const router = useRouter();
+  const [, startTransition] = useTransition();
 
   const [inputValue, setInputValue, search] = useDebouncedUrlParam('q');
   const [selected, setSelected] = useState<CategorySummary | null>(null);
@@ -61,20 +65,23 @@ export function MobileCategoriesClient({ initialData }: Props) {
         toast.error(t('deleteError'));
         return;
       }
-      setIsDeleting(true);
-      try {
-        const result = await deleteCategoryAction(c.id);
-        if (!result.success) {
-          toast.error(result.error);
-          return;
-        }
-        toast.success(t('deleteSuccess'));
-        setDetailOpen(false);
-      } finally {
-        setIsDeleting(false);
+    setIsDeleting(true);
+    try {
+      const result = await deleteCategoryAction(c.id);
+      if (!result.success) {
+        toast.error(tCommon(getErrorKey(result.error)));
+        return;
       }
+      toast.success(t('deleteSuccess'));
+      setDetailOpen(false);
+      startTransition(() => router.refresh());
+    } catch {
+      toast.error(tCommon('error'));
+    } finally {
+      setIsDeleting(false);
+    }
     },
-    [t]
+    [t, router]
   );
 
   return (
@@ -92,6 +99,7 @@ export function MobileCategoriesClient({ initialData }: Props) {
           <button
             onClick={() => setInputValue('')}
             className="absolute right-7 top-1/2 -translate-y-1/2 text-muted-foreground"
+            aria-label="Xóa tìm kiếm"
           >
             <X className="h-4 w-4" />
           </button>

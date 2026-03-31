@@ -5,18 +5,24 @@ import { MobileCategoriesClient } from './_components/mobile-categories-client';
 
 export default async function MobileCategoriesPage() {
   const t = await getTranslations('categories');
+  const categoriesPromise = getAllCategories();
+
   return (
     <div className="space-y-0">
       <h1 className="px-4 pt-1 pb-3 text-xl font-semibold">{t('title')}</h1>
       <Suspense fallback={<CategoriesSkeleton />}>
-        <CategoriesData />
+        <CategoriesData categoriesPromise={categoriesPromise} />
       </Suspense>
     </div>
   );
 }
 
-async function CategoriesData() {
-  const categories = await getAllCategories();
+async function CategoriesData({
+  categoriesPromise,
+}: {
+  categoriesPromise: ReturnType<typeof getAllCategories>;
+}) {
+  const categories = await categoriesPromise;
   return <MobileCategoriesClient initialData={categories} />;
 }
 

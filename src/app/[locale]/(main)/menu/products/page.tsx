@@ -8,20 +8,32 @@ export default async function MobileProductsPage({
 }: {
   searchParams: Promise<{ action?: string }>;
 }) {
-  const [t, { action }] = await Promise.all([getTranslations('products'), searchParams]);
+  console.log('[products.page] rendering — fetching products');
+  const [t, { action }] = await Promise.all([
+    getTranslations('products'),
+    searchParams,
+  ]);
+  const productsPromise = getAllProducts();
 
   return (
     <div className="space-y-0">
       <h1 className="px-4 pt-1 pb-3 text-xl font-semibold">{t('title')}</h1>
       <Suspense fallback={<ProductsSkeleton />}>
-        <ProductsData openAddForm={action === 'add'} />
+        <ProductsData productsPromise={productsPromise} openAddForm={action === 'add'} />
       </Suspense>
     </div>
   );
 }
 
-async function ProductsData({ openAddForm }: { openAddForm: boolean }) {
-  const products = await getAllProducts();
+async function ProductsData({
+  productsPromise,
+  openAddForm,
+}: {
+  productsPromise: ReturnType<typeof getAllProducts>;
+  openAddForm: boolean;
+}) {
+  const products = await productsPromise;
+  console.log(`[products.page] ProductsData resolved — ${products.length} products`);
   return <MobileProductsClient initialData={products} openAddForm={openAddForm} />;
 }
 

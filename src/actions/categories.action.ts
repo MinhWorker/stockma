@@ -26,8 +26,8 @@ export async function createCategoryAction(data: {
 }): Promise<ActionResult> {
   try {
     await createCategory(data);
-    revalidateTag(CATEGORY_TAG, 'default');
-    revalidateTag('products', 'default'); // products list includes categoryName
+    revalidateTag(CATEGORY_TAG, "default");
+    revalidateTag('products', "default"); // products list includes categoryName
     return { success: true };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
@@ -40,8 +40,8 @@ export async function updateCategoryAction(
 ): Promise<ActionResult> {
   try {
     await updateCategory(id, data);
-    revalidateTag(CATEGORY_TAG, 'default');
-    revalidateTag('products', 'default');
+    revalidateTag(CATEGORY_TAG, "default");
+    revalidateTag('products', "default");
     return { success: true };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
@@ -51,7 +51,7 @@ export async function updateCategoryAction(
 export async function deleteCategoryAction(id: number): Promise<ActionResult> {
   try {
     await deleteCategory(id);
-    revalidateTag(CATEGORY_TAG, 'default');
+    revalidateTag(CATEGORY_TAG, "default");
     return { success: true };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };

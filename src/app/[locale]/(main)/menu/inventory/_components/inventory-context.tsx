@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, use, useCallback, useState, type ReactNode } from 'react';
+import { createContext, use, useCallback, useMemo, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useDebouncedUrlParam } from '@/hooks/use-debounced-url-param';
 import { useRouter, usePathname } from '@/i18n/routing';
@@ -74,13 +74,14 @@ export function InventoryProvider({ children }: Props) {
   const openForm = useCallback(() => setFormOpen(true), []);
   const closeForm = useCallback(() => setFormOpen(false), []);
 
+  const contextValue = useMemo<InventoryContextValue>(() => ({
+    state: { inputValue, search, tab, selectedTx, detailOpen, formOpen },
+    actions: { setInputValue, setTab, openDetail, closeDetail, openForm, closeForm },
+  }), [inputValue, search, tab, selectedTx, detailOpen, formOpen,
+      setInputValue, setTab, openDetail, closeDetail, openForm, closeForm]);
+
   return (
-    <InventoryContext
-      value={{
-        state: { inputValue, search, tab, selectedTx, detailOpen, formOpen },
-        actions: { setInputValue, setTab, openDetail, closeDetail, openForm, closeForm },
-      }}
-    >
+    <InventoryContext value={contextValue}>
       {children}
     </InventoryContext>
   );

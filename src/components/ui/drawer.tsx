@@ -40,6 +40,7 @@ function DrawerOverlay({
 function DrawerContent({
   className,
   children,
+  onAnimationEnd,
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Content>) {
   return (
@@ -47,6 +48,15 @@ function DrawerContent({
       <DrawerOverlay />
       <DrawerPrimitive.Content
         data-slot="drawer-content"
+        aria-describedby={undefined}
+        onAnimationEnd={(e) => {
+          // Blur any focused element before vaul sets aria-hidden to avoid
+          // "aria-hidden on focused element" accessibility warning
+          if (e.currentTarget.dataset.state === 'closed') {
+            (document.activeElement as HTMLElement)?.blur();
+          }
+          onAnimationEnd?.(e);
+        }}
         className={cn(
           'group/drawer-content bg-background fixed z-50 flex h-auto flex-col',
           'data-[vaul-drawer-direction=top]:inset-x-0 data-[vaul-drawer-direction=top]:top-0 data-[vaul-drawer-direction=top]:mb-24 data-[vaul-drawer-direction=top]:max-h-[80vh] data-[vaul-drawer-direction=top]:rounded-b-lg data-[vaul-drawer-direction=top]:border-b',

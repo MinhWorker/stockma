@@ -1,7 +1,7 @@
 import 'server-only';
-import { cache } from 'react';
 import { unstable_cache } from 'next/cache';
 import { prisma } from '@/lib/db';
+import { requireNonEmpty } from './validation';
 import type { TransactionRecord, CreateTransactionInput } from './types';
 
 export const TRANSACTION_TAG = 'transactions';
@@ -19,7 +19,7 @@ function mapToTransactionRecord(tx: {
   note: string | null;
   productId: number;
   product: { name: string };
-  userId: number;
+  userId: string;
   user: { name: string | null };
   createdAt: Date;
 }): TransactionRecord {
@@ -50,20 +50,18 @@ const transactionInclude = {
 /**
  * Lay lich su giao dich, mac dinh sap xep moi nhat truoc.
  */
-export const getTransactions = cache(
-  unstable_cache(
-    async (options?: { productId?: number; limit?: number }): Promise<TransactionRecord[]> => {
-      const rows = await prisma.stockTransaction.findMany({
-        where: options?.productId ? { productId: options.productId } : undefined,
-        include: transactionInclude,
-        orderBy: { createdAt: 'desc' },
-        take: options?.limit,
-      });
-      return rows.map(mapToTransactionRecord);
-    },
-    ['transactions'],
-    { tags: [TRANSACTION_TAG] }
-  )
+export const getTransactions = unstable_cache(
+  async (options?: { productId?: number; limit?: number }): Promise<TransactionRecord[]> => {
+    const rows = await prisma.stockTransaction.findMany({
+      where: options?.productId ? { productId: options.productId } : undefined,
+      include: transactionInclude,
+      orderBy: { createdAt: 'desc' },
+      take: options?.limit,
+    });
+    return rows.map(mapToTransactionRecord);
+  },
+  ['transactions'],
+  { tags: [TRANSACTION_TAG] }
 );
 
 // ---------------------------------------------------------------------------
@@ -85,6 +83,10 @@ export const getTransactions = cache(
  * - adjustment:  quantity co the am hoac duong (dieu chinh kiem ke)
  */
 export async function createTransaction(input: CreateTransactionInput): Promise<TransactionRecord> {
+  requireNonEmpty(input.userId, 'User ID');
+  if (!input.quantity || input.quantity === 0) throw new Error('Quantity must not be zero');
+  if (!input.productId) throw new Error('Product is required');
+
   const result = await prisma.$transaction(async (tx) => {
     // Doc snapshot ton kho hien tai trong cung transaction de tranh race condition
     const latestSnapshot = await tx.stockTransaction.findFirst({
@@ -97,10 +99,7 @@ export async function createTransaction(input: CreateTransactionInput): Promise<
     const stockAfter = stockBefore + input.quantity;
 
     if (stockAfter < 0) {
-      throw new Error(
-        `Insufficient stock for product ${input.productId}: ` +
-          `current=${stockBefore}, requested=${input.quantity}`
-      );
+      throw new Error('ERR_INSUFFICIENT_STOCK');
     }
 
     const created = await tx.stockTransaction.create({
@@ -144,10 +143,7 @@ export async function createBatchTransactions(
       const stockAfter = stockBefore + input.quantity;
 
       if (stockAfter < 0) {
-        throw new Error(
-          `Insufficient stock for product ${input.productId}: ` +
-            `current=${stockBefore}, requested=${input.quantity}`
-        );
+        throw new Error('ERR_INSUFFICIENT_STOCK');
       }
 
       const row = await tx.stockTransaction.create({

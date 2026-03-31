@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, use, useCallback, useState, type ReactNode } from 'react';
+import { createContext, use, useCallback, useMemo, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useDebouncedUrlParam } from '@/hooks/use-debounced-url-param';
 import { useRouter, usePathname } from '@/i18n/routing';
@@ -99,32 +99,41 @@ export function ProductsProvider({ children, openAddForm }: Props) {
     setEditingProduct(p);
     setFormOpen(true);
   }, []);
-  const closeForm = useCallback(() => setFormOpen(false), []);
+  const closeForm = useCallback(() => {
+    setFormOpen(false);
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('action')) {
+      params.delete('action');
+      const qs = params.toString();
+      router.replace(`${pathname}${qs ? `?${qs}` : ''}` as Parameters<typeof router.replace>[0], { scroll: false });
+    }
+  }, [router, pathname]);
+
+  const contextValue = useMemo<ProductsContextValue>(() => ({
+    state: {
+      inputValue,
+      search,
+      statusFilter,
+      selectedProduct,
+      detailOpen,
+      formOpen,
+      editingProduct,
+    },
+    actions: {
+      setInputValue,
+      setStatusFilter,
+      clearFilters,
+      openDetail,
+      closeDetail,
+      openAdd,
+      openEdit,
+      closeForm,
+    },
+  }), [inputValue, search, statusFilter, selectedProduct, detailOpen, formOpen, editingProduct,
+      setInputValue, setStatusFilter, clearFilters, openDetail, closeDetail, openAdd, openEdit, closeForm]);
 
   return (
-    <ProductsContext
-      value={{
-        state: {
-          inputValue,
-          search,
-          statusFilter,
-          selectedProduct,
-          detailOpen,
-          formOpen,
-          editingProduct,
-        },
-        actions: {
-          setInputValue,
-          setStatusFilter,
-          clearFilters,
-          openDetail,
-          closeDetail,
-          openAdd,
-          openEdit,
-          closeForm,
-        },
-      }}
-    >
+    <ProductsContext value={contextValue}>
       {children}
     </ProductsContext>
   );

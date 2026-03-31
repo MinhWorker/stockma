@@ -43,18 +43,27 @@
     "deleting": "Đang xóa...",
     "submitting": "Đang gửi...",
     "success": "Thành công",
-    "error": "Lỗi",
+    "error": "Đã có lỗi xảy ra",
     "warning": "Cảnh báo",
-    "info": "Thông tin"
+    "info": "Thông tin",
+    "errInsufficientStock": "Không đủ hàng trong kho",
+    "errHasProducts": "Không thể xóa vì đang có sản phẩm liên kết",
+    "errHasTransactions": "Không thể xóa vì đang có giao dịch liên kết",
+    "errPriceBelowCost": "Giá bán phải lớn hơn hoặc bằng giá nhập"
   },
   "auth": {
     "signIn": "Đăng nhập",
     "signOut": "Đăng xuất",
     "welcomeBack": "Chào mừng trở lại",
+    "loginSubtitle": "Đăng nhập vào tài khoản của bạn",
+    "login": "Đăng nhập",
+    "loggingIn": "Đang đăng nhập...",
+    "loginError": "Email hoặc mật khẩu không đúng",
+    "email": "Email",
+    "password": "Mật khẩu",
     "pickAccountDescription": "Chọn tài khoản để tiếp tục",
     "createAccountTitle": "Tạo tài khoản",
     "createAccountDescription": "Nhập email của bạn để bắt đầu",
-    "email": "Email",
     "emailPlaceholder": "ban@example.com",
     "name": "Tên",
     "namePlaceholder": "Tên của bạn",
@@ -104,6 +113,10 @@
       "categoryPlaceholder": "Chọn danh mục",
       "description": "Mô tả",
       "descriptionPlaceholder": "Nhập mô tả sản phẩm",
+      "provider": "Nhà cung cấp",
+      "providerPlaceholder": "Chọn nhà cung cấp",
+      "inventory": "Kho hàng",
+      "inventoryPlaceholder": "Chọn kho hàng",
       "costPrice": "Giá nhập",
       "retailPrice": "Giá bán",
       "reorderLevel": "Mức tái đặt hàng",
@@ -252,7 +265,13 @@
       "stockOutDesc": "Nhận thông báo khi sản phẩm hết hàng",
       "newTransaction": "Cảnh báo giao dịch mới",
       "newTransactionDesc": "Nhận thông báo cho mỗi giao dịch kho mới",
-      "saveSuccess": "Đã lưu cài đặt thông báo"
+      "saveSuccess": "Đã lưu cài đặt thông báo",
+      "subscribe": "Bật thông báo đẩy",
+      "unsubscribe": "Tắt thông báo đẩy",
+      "subscribed": "Đã bật thông báo đẩy",
+      "unsubscribed": "Đã tắt thông báo đẩy",
+      "notSubscribed": "Hãy bật thông báo trước",
+      "permissionDenied": "Quyền thông báo bị từ chối"
     },
     "users": {
       "title": "Quản lý người dùng",
@@ -327,9 +346,47 @@
       "reportsDesc": "Tạo và tải báo cáo kho",
       "transactions": "Giao dịch",
       "transactionsDesc": "Lịch sử toàn bộ giao dịch",
+      "providers": "Nhà cung cấp",
+      "providersDesc": "Quản lý nhà cung cấp",
       "settings": "Cài đặt",
       "settingsDesc": "Cấu hình ứng dụng và tài khoản"
     }
+  },
+  "inventorySetup": {
+    "title": "Kho hàng",
+    "addInventory": "Thêm kho",
+    "editInventory": "Sửa kho",
+    "products": "sản phẩm",
+    "form": {
+      "name": "Tên kho",
+      "namePlaceholder": "Ví dụ: Kho chính…",
+      "description": "Mô tả",
+      "descriptionPlaceholder": "Mô tả tùy chọn…"
+    },
+    "saveSuccess": "Đã lưu kho",
+    "deleteSuccess": "Đã xóa kho",
+    "deleteError": "Không thể xóa kho đang có sản phẩm",
+    "emptyDesc": "Chưa có kho nào. Thêm kho để bắt đầu."
+  },
+  "providers": {
+    "title": "Nhà cung cấp",
+    "addProvider": "Thêm nhà cung cấp",
+    "editProvider": "Sửa nhà cung cấp",
+    "searchPlaceholder": "Tìm theo tên...",
+    "countLabel": "nhà cung cấp",
+    "columns": { "products": "Số sản phẩm" },
+    "form": {
+      "name": "Tên nhà cung cấp",
+      "namePlaceholder": "Nhập tên nhà cung cấp"
+    },
+    "deleteConfirmTitle": "Xóa nhà cung cấp",
+    "saveSuccess": "Lưu nhà cung cấp thành công",
+    "deleteSuccess": "Xóa nhà cung cấp thành công",
+    "deleteError": "Không thể xóa nhà cung cấp đang có sản phẩm",
+    "emptyTitle": "Chưa có nhà cung cấp",
+    "emptyDesc": "Thêm nhà cung cấp đầu tiên để bắt đầu",
+    "emptyFilterTitle": "Không tìm thấy nhà cung cấp",
+    "emptyFilterDesc": "Thử điều chỉnh tiêu chí tìm kiếm"
   },
   "categories": {
     "title": "Danh mục",
@@ -356,6 +413,13 @@
     "emptyDesc": "Thêm danh mục đầu tiên để bắt đầu",
     "emptyFilterTitle": "Không tìm thấy danh mục",
     "emptyFilterDesc": "Thử điều chỉnh tiêu chí tìm kiếm"
+  },
+  "errors": {
+    "insufficientStock": "Không đủ hàng trong kho",
+    "hasProducts": "Không thể xóa vì đang có sản phẩm liên kết",
+    "hasTransactions": "Không thể xóa vì đang có giao dịch liên kết",
+    "priceBelowCost": "Giá bán phải lớn hơn hoặc bằng giá nhập",
+    "unknown": "Đã có lỗi xảy ra, vui lòng thử lại"
   },
   "loading": {
     "message": "Đang tải..."

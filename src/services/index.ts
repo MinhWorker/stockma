@@ -13,3 +13,4 @@ export * from './transaction.service';
 export * from './dashboard.service';
 export * from './provider.service';
 export * from './category.service';
+export * from './notification.service';

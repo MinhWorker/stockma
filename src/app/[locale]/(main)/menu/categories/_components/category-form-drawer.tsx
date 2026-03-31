@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useTransition, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslations } from 'next-intl';
@@ -22,6 +23,7 @@ import {
 } from '@/components/ui/select';
 import { FormField } from '@/components/forms/form-field';
 import { createCategoryAction, updateCategoryAction } from '@/actions/categories.action';
+import { getErrorKey } from '@/lib/error-message';
 import type { CategorySummary } from '@/services/types';
 
 const STATES = ['active', 'inactive'];
@@ -36,6 +38,8 @@ interface Props {
 export function CategoryFormDrawer({ open, onOpenChange, category, onSuccess }: Props) {
   const t = useTranslations('categories');
   const tCommon = useTranslations('common');
+  const router = useRouter();
+  const [, startTransition] = useTransition();
   const nameId = useId();
 
   const [name, setName] = useState('');
@@ -62,12 +66,15 @@ export function CategoryFormDrawer({ open, onOpenChange, category, onSuccess }: 
         ? await updateCategoryAction(category.id, { name: name.trim(), state })
         : await createCategoryAction({ name: name.trim(), state });
       if (!result.success) {
-        toast.error(result.error);
+        toast.error(tCommon(getErrorKey(result.error)));
         return;
       }
       toast.success(t('saveSuccess'));
       onSuccess();
       onOpenChange(false);
+      startTransition(() => router.refresh());
+    } catch {
+      toast.error(tCommon('error'));
     } finally {
       setIsSubmitting(false);
     }

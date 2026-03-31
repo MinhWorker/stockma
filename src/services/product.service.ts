@@ -2,6 +2,7 @@ import 'server-only';
 import { cache } from 'react';
 import { unstable_cache } from 'next/cache';
 import { prisma } from '@/lib/db';
+import { requireNonEmpty, requirePositive, requireNonNegative } from './validation';
 import type {
   ProductSummary,
   ProductStatus,
@@ -102,29 +103,27 @@ const productInclude = {
  * Dung mot query aggregate de lay stockQty cua tat ca san pham,
  * tranh N+1 query.
  */
-export const getAllProducts = cache(
-  unstable_cache(
-    async (): Promise<ProductSummary[]> => {
-      const [products, stockAggregates] = await Promise.all([
-        prisma.product.findMany({
-          include: productInclude,
-          orderBy: { name: 'asc' },
-        }),
-        prisma.stockTransaction.groupBy({
-          by: ['productId'],
-          _sum: { quantity: true },
-        }),
-      ]);
+export const getAllProducts = unstable_cache(
+  async (): Promise<ProductSummary[]> => {
+    const [products, stockAggregates] = await Promise.all([
+      prisma.product.findMany({
+        include: productInclude,
+        orderBy: { name: 'asc' },
+      }),
+      prisma.stockTransaction.groupBy({
+        by: ['productId'],
+        _sum: { quantity: true },
+      }),
+    ]);
 
-      const stockMap = new Map<number, number>(
-        stockAggregates.map((row) => [row.productId, row._sum.quantity ?? 0])
-      );
+    const stockMap = new Map<number, number>(
+      stockAggregates.map((row) => [row.productId, row._sum.quantity ?? 0])
+    );
 
-      return products.map((p) => mapToProductSummary(p, stockMap.get(p.id) ?? 0));
-    },
-    ['products'],
-    { tags: [PRODUCT_TAG] }
-  )
+    return products.map((p) => mapToProductSummary(p, stockMap.get(p.id) ?? 0));
+  },
+  ['products'],
+  { tags: [PRODUCT_TAG] }
 );
 
 /**
@@ -184,6 +183,13 @@ export const getLowStockProducts = cache(async (): Promise<ProductSummary[]> => 
  * viec nhap hang dau tien phai thuc hien qua transactionService.createTransaction.
  */
 export async function createProduct(input: CreateProductInput): Promise<ProductSummary> {
+  requireNonEmpty(input.name, 'Product name');
+  requirePositive(input.costPrice, 'Cost price');
+  requirePositive(input.price, 'Retail price');
+  requireNonNegative(input.reorderLevel ?? 0, 'Reorder level');
+  if (input.price < input.costPrice)
+    throw new Error('ERR_PRICE_BELOW_COST');
+
   const product = await prisma.product.create({
     data: {
       name: input.name,
@@ -212,6 +218,13 @@ export async function updateProduct(
   id: number,
   input: UpdateProductInput
 ): Promise<ProductSummary> {
+  if (input.name !== undefined) requireNonEmpty(input.name, 'Product name');
+  if (input.costPrice !== undefined) requirePositive(input.costPrice, 'Cost price');
+  if (input.price !== undefined) requirePositive(input.price, 'Retail price');
+  if (input.reorderLevel !== undefined) requireNonNegative(input.reorderLevel, 'Reorder level');
+  if (input.price !== undefined && input.costPrice !== undefined && input.price < input.costPrice)
+    throw new Error('ERR_PRICE_BELOW_COST');
+
   const product = await prisma.product.update({
     where: { id },
     data: {
@@ -240,9 +253,7 @@ export async function updateProduct(
 export async function deleteProduct(id: number): Promise<void> {
   const transactionCount = await prisma.stockTransaction.count({ where: { productId: id } });
   if (transactionCount > 0) {
-    throw new Error(
-      `Cannot delete product ${id}: it has ${transactionCount} associated transactions.`
-    );
+    throw new Error('ERR_HAS_TRANSACTIONS');
   }
   await prisma.product.delete({ where: { id } });
 }

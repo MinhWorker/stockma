@@ -129,13 +129,16 @@ import {
 } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
 import { getProductsAction } from '@/actions/products.action';
-import { useEffect, useId } from 'react';
+import { getErrorKey } from '@/lib/error-message';
+import { useEffect, useId, useRef, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
+import { useSession } from '@/lib/auth-client';
 import type { ProductSummary } from '@/services/types';
 
-const TX_TYPES: { value: TransactionType; label: string }[] = [
-  { value: 'stock_in', label: 'Nhập kho' },
-  { value: 'stock_out', label: 'Xuất kho' },
-  { value: 'adjustment', label: 'Điều chỉnh' },
+const TX_TYPES: { value: TransactionType; labelKey: string }[] = [
+  { value: 'stock_in', labelKey: 'tabs.stockIn' },
+  { value: 'stock_out', labelKey: 'tabs.stockOut' },
+  { value: 'adjustment', labelKey: 'tabs.adjustments' },
 ];
 
 function TransactionFormDrawer({
@@ -151,6 +154,9 @@ function TransactionFormDrawer({
   const t = useTranslations('inventory');
   const quantityId = useId();
   const noteId = useId();
+  const router = useRouter();
+  const [, startTransition] = useTransition();
+  const { data: session } = useSession();
 
   const [type, setType] = useState<TransactionType>('stock_in');
   const [productId, setProductId] = useState<number>(0);
@@ -160,10 +166,13 @@ function TransactionFormDrawer({
   const [products, setProducts] = useState<ProductSummary[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const loadedRef = useRef(false);
 
   useEffect(() => {
-    getProductsAction().then(setProducts);
-  }, []);
+    if (!open || loadedRef.current) return;
+    loadedRef.current = true;
+    getProductsAction().then(setProducts).catch(() => {});
+  }, [open]);
 
   useEffect(() => {
     if (!open) {
@@ -173,6 +182,7 @@ function TransactionFormDrawer({
       setNote('');
       setProductSearch('');
       setErrors({});
+      loadedRef.current = false;
     }
   }, [open]);
 
@@ -193,13 +203,14 @@ function TransactionFormDrawer({
 
     setIsSubmitting(true);
     try {
-      const result = await createTransactionAction({ type, productId, quantity, note, userId: 1 });
+      const result = await createTransactionAction({ type, productId, quantity, note, userId: session?.user?.id ?? '' });
       if (!result.success) {
-        toast.error(result.error);
+        toast.error(tCommon(getErrorKey(result.error)));
         return;
       }
       toast.success(t('submitSuccess'));
       onSuccess();
+      startTransition(() => router.refresh());
     } finally {
       setIsSubmitting(false);
     }
@@ -220,7 +231,7 @@ function TransactionFormDrawer({
               <SelectContent>
                 {TX_TYPES.map((tt) => (
                   <SelectItem key={tt.value} value={tt.value}>
-                    {tt.label}
+                    {t(tt.labelKey as Parameters<typeof t>[0])}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -237,8 +248,11 @@ function TransactionFormDrawer({
             >
               <ComboboxInput
                 placeholder={t('form.productPlaceholder')}
-                value={productSearch}
-                onChange={(e) => setProductSearch(e.target.value)}
+                value={productId && !productSearch ? (selectedProduct?.name ?? '') : productSearch}
+                onChange={(e) => {
+                  setProductSearch(e.target.value);
+                  if (!e.target.value) setProductId(0);
+                }}
                 aria-invalid={!!errors.productId}
               />
               <ComboboxContent>

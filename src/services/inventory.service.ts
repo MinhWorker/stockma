@@ -1,6 +1,7 @@
 import 'server-only';
 import { cache } from 'react';
 import { prisma } from '@/lib/db';
+import { requireNonEmpty } from './validation';
 import type { InventorySummary } from './types';
 
 // ---------------------------------------------------------------------------
@@ -148,6 +149,7 @@ export async function createInventory(data: {
   name: string;
   description?: string;
 }): Promise<InventorySummary> {
+  requireNonEmpty(data.name, 'Inventory name');
   const inv = await prisma.inventory.create({ data });
   return {
     id: inv.id,
@@ -166,6 +168,7 @@ export async function updateInventory(
   id: number,
   data: { name?: string; description?: string }
 ): Promise<InventorySummary> {
+  if (data.name !== undefined) requireNonEmpty(data.name, 'Inventory name');
   await prisma.inventory.update({ where: { id }, data });
   const updated = await getInventoryById(id);
   if (!updated) throw new Error(`Inventory ${id} not found after update.`);
@@ -175,7 +178,7 @@ export async function updateInventory(
 export async function deleteInventory(id: number): Promise<void> {
   const productCount = await prisma.product.count({ where: { inventoryId: id } });
   if (productCount > 0) {
-    throw new Error(`Cannot delete inventory ${id}: it still contains ${productCount} products.`);
+    throw new Error('ERR_HAS_PRODUCTS');
   }
   await prisma.inventory.delete({ where: { id } });
 }
