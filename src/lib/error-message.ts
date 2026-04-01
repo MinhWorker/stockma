@@ -5,6 +5,12 @@ const ERROR_KEY_MAP: Record<string, string> = {
   ERR_HAS_PRODUCTS: 'errHasProducts',
   ERR_HAS_TRANSACTIONS: 'errHasTransactions',
   ERR_PRICE_BELOW_COST: 'errPriceBelowCost',
+  ERR_VARIANT_DUPLICATE_NAME: 'errVariantDuplicateName',
+  ERR_VARIANT_HAS_TRANSACTIONS: 'errVariantHasTransactions',
+  ERR_VARIANT_REQUIRED: 'errVariantRequired',
+  ERR_DEBT_ALREADY_CLOSED: 'errDebtAlreadyClosed',
+  ERR_INVALID_PAYMENT_AMOUNT: 'errInvalidPaymentAmount',
+  ERR_RETURN_QTY_INVALID: 'errReturnQtyInvalid',
 };
 
 /**

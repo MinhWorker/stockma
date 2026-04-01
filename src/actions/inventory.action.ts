@@ -1,13 +1,23 @@
 'use server';
 
 import { revalidateTag } from 'next/cache';
-import { createTransaction } from '@/services/transaction.service';
+import { createTransaction, createStockOutWithGifts } from '@/services/transaction.service';
 import { getProductById } from '@/services/product.service';
 import { getAllInventories } from '@/services/inventory.service';
 import { sendNotificationToAll } from '@/services/notification.service';
-import { TRANSACTION_TAG } from '@/services/transaction.service';
-import { PRODUCT_TAG } from '@/services/product.service';
-import type { TransactionType } from '@/services/types';
+import { TRANSACTION_CACHE_TAG } from '@/services/transaction.service';
+import { PRODUCT_CACHE_TAG } from '@/services/product.service';
+import type {
+  TransactionType,
+  StockOutType,
+  GiftItemInput,
+} from '@/services/types';
+
+export interface ActionResult<T = void> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
 
 export interface CreateTransactionPayload {
   type: TransactionType;
@@ -15,12 +25,21 @@ export interface CreateTransactionPayload {
   quantity: number;
   note?: string;
   userId: string;
+  variantId?: number;
+  purchasePrice?: number;
 }
 
-export interface ActionResult<T = void> {
-  success: boolean;
-  data?: T;
-  error?: string;
+export interface CreateStockOutPayload {
+  productId: number;
+  quantity: number;
+  note?: string;
+  userId: string;
+  stockOutType: StockOutType;
+  variantId?: number;
+  salePrice?: number;
+  gifts?: GiftItemInput[];
+  debtorName?: string;
+  paidAmount?: number;
 }
 
 export async function createTransactionAction(
@@ -34,32 +53,28 @@ export async function createTransactionAction(
         payload.type === 'stock_out' ? -Math.abs(payload.quantity) : Math.abs(payload.quantity),
       note: payload.note,
       userId: payload.userId,
+      variantId: payload.variantId,
+      purchasePrice: payload.purchasePrice,
+      // stock_out via this action defaults to transfer (no salePrice needed)
+      stockOutType: payload.type === 'stock_out' ? 'transfer' : undefined,
     });
 
-    revalidateTag(TRANSACTION_TAG, "default");
-    revalidateTag(PRODUCT_TAG, "default");
+    revalidateTag(TRANSACTION_CACHE_TAG, 'default');
+    revalidateTag(PRODUCT_CACHE_TAG, 'default');
 
     // Fire push notifications (non-blocking)
     const product = await getProductById(payload.productId);
     if (product) {
-      // New transaction notification
       sendNotificationToAll('newTransaction', {
         title: 'Giao dịch mới',
         body: `${payload.type === 'stock_in' ? 'Nhập' : payload.type === 'stock_out' ? 'Xuất' : 'Điều chỉnh'} ${Math.abs(payload.quantity)} × ${product.name}`,
         url: '/menu/inventory',
       }).catch(() => {});
 
-      // Low stock / out of stock notifications after transaction
       if (product.status === 'out_of_stock') {
         sendNotificationToAll('stockOut', {
           title: 'Hết hàng',
           body: `${product.name} đã hết hàng`,
-          url: '/menu/inventory',
-        }).catch(() => {});
-      } else if (product.status === 'low_stock') {
-        sendNotificationToAll('lowStock', {
-          title: 'Sắp hết hàng',
-          body: `${product.name} còn ${product.stockQty} (mức tối thiểu: ${product.reorderLevel})`,
           url: '/menu/inventory',
         }).catch(() => {});
       }
@@ -67,8 +82,34 @@ export async function createTransactionAction(
 
     return { success: true };
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    return { success: false, error: message };
+    return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+  }
+}
+
+export async function createStockOutAction(
+  payload: CreateStockOutPayload
+): Promise<ActionResult<import('@/services/transaction.service').StockOutResult>> {
+  try {
+    const result = await createStockOutWithGifts({
+      type: 'stock_out',
+      productId: payload.productId,
+      quantity: -Math.abs(payload.quantity),
+      note: payload.note,
+      userId: payload.userId,
+      stockOutType: payload.stockOutType,
+      variantId: payload.variantId,
+      salePrice: payload.salePrice,
+      gifts: payload.gifts,
+      debtorName: payload.debtorName,
+      paidAmount: payload.paidAmount,
+    });
+
+    revalidateTag(TRANSACTION_CACHE_TAG, 'default');
+    revalidateTag(PRODUCT_CACHE_TAG, 'default');
+
+    return { success: true, data: result };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
   }
 }
 

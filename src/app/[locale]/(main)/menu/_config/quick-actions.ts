@@ -34,6 +34,13 @@ export const ACTION_GROUPS: ActionGroup[] = [
         intent: 'stock_out',
       },
       {
+        id: 'order',
+        labelKey: 'order',
+        descriptionKey: 'orderDesc',
+        href: '/menu/order',
+        color: 'bg-pink-500',
+      },
+      {
         id: 'adjustment',
         labelKey: 'adjustment',
         descriptionKey: 'adjustmentDesc',
@@ -106,6 +113,13 @@ export const ACTION_GROUPS: ActionGroup[] = [
   {
     groupKey: 'system',
     actions: [
+      {
+        id: 'activity',
+        labelKey: 'activity',
+        descriptionKey: 'activityDesc',
+        href: '/menu/activity',
+        color: 'bg-purple-500',
+      },
       {
         id: 'settings',
         labelKey: 'settings',

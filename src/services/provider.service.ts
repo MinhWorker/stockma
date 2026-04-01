@@ -59,11 +59,15 @@ export async function createProvider(data: { name: string }): Promise<ProviderSu
 
 export async function updateProvider(id: number, data: { name: string }): Promise<ProviderSummary> {
   requireNonEmpty(data.name, 'Provider name');
-  const provider = await prisma.provider.update({ where: { id }, data });
+  const provider = await prisma.provider.update({
+    where: { id },
+    data,
+    include: { _count: { select: { provideItems: true } } },
+  });
   return {
     id: provider.id,
     name: provider.name,
-    totalProducts: 0,
+    totalProducts: provider._count.provideItems,
     createdAt: provider.createdAt,
     updatedAt: provider.updatedAt,
   };

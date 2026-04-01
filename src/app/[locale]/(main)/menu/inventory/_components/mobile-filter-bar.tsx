@@ -1,16 +1,10 @@
 'use client';
 
+import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import type { TransactionType } from '@/types/transaction';
 
 type TabValue = 'all' | TransactionType;
-
-const TABS: { value: TabValue; label: string }[] = [
-  { value: 'all', label: 'Tất cả' },
-  { value: 'stock_in', label: 'Nhập kho' },
-  { value: 'stock_out', label: 'Xuất kho' },
-  { value: 'adjustment', label: 'Điều chỉnh' },
-];
 
 interface Props {
   active: TabValue;
@@ -18,6 +12,15 @@ interface Props {
 }
 
 export function MobileFilterBar({ active, onChange }: Props) {
+  const t = useTranslations('inventory.tabs');
+
+  const TABS: { value: TabValue; label: string }[] = [
+    { value: 'all', label: t('all') },
+    { value: 'stock_in', label: t('stockIn') },
+    { value: 'stock_out', label: t('stockOut') },
+    { value: 'adjustment', label: t('adjustments') },
+  ];
+
   return (
     <div className="flex gap-2 overflow-x-auto px-4 py-2 scrollbar-none">
       {TABS.map((tab) => (

@@ -1,7 +1,6 @@
-import { DeviceRedirect } from '@/components/device-redirect';
+import { redirect } from '@/i18n/routing';
 
-// Server component — renders a client redirect component that checks device type:
-// desktop → /dashboard, mobile → /menu
-export default function LocaleRootPage() {
-  return <DeviceRedirect />;
+export default async function LocaleRootPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  redirect({ href: '/menu', locale });
 }

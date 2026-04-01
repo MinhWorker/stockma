@@ -17,6 +17,9 @@ model User {
   emailVerified     Boolean            @default(false)
   image             String?
   transactions      StockTransaction[]
+  returnTransactions ReturnTransaction[]
+  debtPayments      DebtPayment[]
+  activityLogs      ActivityLog[]
   pushSubscriptions PushSubscription[]
   sessions          Session[]
   accounts          Account[]
@@ -82,8 +85,8 @@ model Product {
   costPrice        Int
   // price: gia ban le
   price            Int
-  // reorderLevel: nguong ton kho toi thieu, duoi muc nay la "low_stock"
-  reorderLevel     Int                @default(0)
+  // unit: don vi tinh (tuy chon)
+  unit             String?
   categoryId       Int
   category         ProductCategory    @relation(fields: [categoryId], references: [id])
   providerId       Int
@@ -91,8 +94,26 @@ model Product {
   inventoryId      Int
   inventory        Inventory          @relation(fields: [inventoryId], references: [id])
   transactions     StockTransaction[]
+  variants         ProductVariant[]
+  returnTransactions ReturnTransaction[]
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
+}
+
+model ProductVariant {
+  id           Int                @id @default(autoincrement())
+  productId    Int
+  product      Product            @relation(fields: [productId], references: [id])
+  name         String
+  costPrice    Int?
+  price        Int?
+  unit         String?
+  transactions StockTransaction[]
+  returnTransactions ReturnTransaction[]
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  @@unique([productId, name])
 }
 
 model ProductCategory {
@@ -116,25 +137,110 @@ model Provider {
 // Ton kho hien tai = SUM(quantity) cua tat ca transactions theo productId,
 // trong do stock_in va adjustment la duong, stock_out la am.
 model StockTransaction {
-  id         Int             @id @default(autoincrement())
-  type       TransactionType
+  id          Int              @id @default(autoincrement())
+  type        TransactionType
   // quantity: so duong cho stock_in/adjustment, so am cho stock_out
-  quantity   Int
+  quantity    Int
   // stockBefore / stockAfter: snapshot tai thoi diem giao dich
   stockBefore Int
   stockAfter  Int
-  note       String?
-  productId  Int
-  product    Product         @relation(fields: [productId], references: [id])
-  userId     String
-  user       User            @relation(fields: [userId], references: [id])
-  createdAt  DateTime        @default(now())
+  note        String?
+  productId   Int
+  product     Product          @relation(fields: [productId], references: [id])
+  userId      String
+  user        User             @relation(fields: [userId], references: [id])
+  // New fields
+  variantId            Int?
+  variant              ProductVariant?   @relation(fields: [variantId], references: [id])
+  stockOutType         StockOutType?
+  salePrice            Int?
+  purchasePrice        Int?
+  isGift               Boolean           @default(false)
+  parentTransactionId  Int?
+  parentTransaction    StockTransaction? @relation("GiftItems", fields: [parentTransactionId], references: [id])
+  giftItems            StockTransaction[] @relation("GiftItems")
+  returnTransactionId  Int?
+  returnTransaction    ReturnTransaction? @relation(fields: [returnTransactionId], references: [id])
+  debtGroup            DebtGroup?
+  createdAt   DateTime         @default(now())
 }
 
 enum TransactionType {
   stock_in
   stock_out
   adjustment
+}
+
+enum StockOutType {
+  retail
+  wholesale
+  transfer
+}
+
+model ReturnTransaction {
+  id             Int              @id @default(autoincrement())
+  productId      Int
+  product        Product          @relation(fields: [productId], references: [id])
+  variantId      Int?
+  variant        ProductVariant?  @relation(fields: [variantId], references: [id])
+  returnQty      Int
+  replacementQty Int
+  purchasePrice  Int?
+  note           String?
+  transactions   StockTransaction[]
+  userId         String
+  user           User             @relation(fields: [userId], references: [id])
+  createdAt      DateTime         @default(now())
+}
+
+model DebtGroup {
+  id            Int          @id @default(autoincrement())
+  transactionId Int          @unique
+  transaction   StockTransaction @relation(fields: [transactionId], references: [id])
+  debtorName    String
+  totalAmount   Int
+  paidAmount    Int          @default(0)
+  status        DebtStatus   @default(open)
+  payments      DebtPayment[]
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+}
+
+enum DebtStatus {
+  open
+  closed
+  cancelled
+}
+
+model DebtPayment {
+  id          Int       @id @default(autoincrement())
+  debtGroupId Int
+  debtGroup   DebtGroup @relation(fields: [debtGroupId], references: [id])
+  amount      Int
+  note        String?
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  createdAt   DateTime  @default(now())
+}
+
+model ActivityLog {
+  id          Int            @id @default(autoincrement())
+  action      ActivityAction
+  entityType  String
+  entityId    Int?
+  entityName  String?
+  description String
+  inventoryId Int?
+  userId      String
+  user        User           @relation(fields: [userId], references: [id])
+  createdAt   DateTime       @default(now())
+}
+
+enum ActivityAction {
+  create
+  update
+  delete
+  export
 }
 
 // Push notification subscriptions per user

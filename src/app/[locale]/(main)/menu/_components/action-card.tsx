@@ -17,6 +17,8 @@ import {
   Settings,
   Tag,
   Truck,
+  History,
+  ClipboardList,
   HelpCircle,
   type LucideIcon,
 } from 'lucide-react';
@@ -25,6 +27,7 @@ const ICON_BY_ID: Record<string, LucideIcon> = {
   'stock-in': ArrowDownToLine,
   'stock-out': ArrowUpFromLine,
   adjustment: SlidersHorizontal,
+  order: ClipboardList,
   inventory: Warehouse,
   products: Package,
   'add-product': PackagePlus,
@@ -34,6 +37,7 @@ const ICON_BY_ID: Record<string, LucideIcon> = {
   reports: BarChart3,
   transactions: ArrowLeftRight,
   settings: Settings,
+  activity: History,
 };
 
 interface ActionCardProps {

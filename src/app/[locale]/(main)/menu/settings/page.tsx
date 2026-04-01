@@ -5,6 +5,7 @@ import { getSession } from '@/lib/session';
 import { getSubscriptionsByUserId } from '@/services/notification.service';
 import { MobileSettingsClient } from './_components/mobile-settings-client';
 import { InventorySection } from './_components/inventory-section';
+import { DangerZone } from './_components/danger-zone';
 
 export default async function MobileSettingsPage() {
   const t = await getTranslations('settings');
@@ -23,6 +24,7 @@ export default async function MobileSettingsPage() {
       <Suspense fallback={<SettingsSkeleton />}>
         <SettingsData prefsPromise={prefsPromise} />
       </Suspense>
+      {process.env.NODE_ENV === 'development' && <DangerZone />}
     </div>
   );
 }

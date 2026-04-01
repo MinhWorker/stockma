@@ -1,10 +1,21 @@
 'use client';
 
-import { CheckCircle2, Loader2 } from 'lucide-react';
+import { useCallback, useEffect, useId, useState } from 'react';
+import { useRouter } from '@/i18n/routing';
+import { CheckCircle2, Loader2, Plus, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { FormField } from '@/components/forms/form-field';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Combobox,
   ComboboxInput,
@@ -13,27 +24,182 @@ import {
   ComboboxItem,
   ComboboxEmpty,
 } from '@/components/ui/combobox';
-import { useTransactionForm } from '../../_hooks/use-transaction-form';
+import { getProductsAction } from '@/actions/products.action';
+import { createStockOutAction } from '@/actions/inventory.action';
+import { useSession } from '@/lib/auth-client';
+import { getErrorKey } from '@/lib/error-message';
+import type { ProductSummary, StockOutType, GiftItemInput } from '@/services/types';
+
+interface GiftItemState {
+  id: string; // local key
+  productId: number;
+  productSearch: string;
+  variantId: number | undefined;
+  variantSearch: string;
+  quantity: number;
+}
+
+function newGiftItem(): GiftItemState {
+  return {
+    id: Math.random().toString(36).slice(2),
+    productId: 0,
+    productSearch: '',
+    variantId: undefined,
+    variantSearch: '',
+    quantity: 1,
+  };
+}
 
 export function StockOutClient() {
-  const {
-    values,
-    errors,
-    isSubmitting,
-    done,
-    products,
-    productInputValue,
-    handleProductSearch,
-    selectedProduct,
-    set,
-    handleSubmit,
-    handleReset,
-    handleClose,
-    quantityId,
-    noteId,
-    t,
-    tCommon,
-  } = useTransactionForm('stock_out');
+  const t = useTranslations('inventory');
+  const tCommon = useTranslations('common');
+  const router = useRouter();
+  const { data: session } = useSession();
+
+  const quantityId = useId();
+  const noteId = useId();
+
+  // Core fields
+  const [productId, setProductId] = useState<number>(0);
+  const [quantity, setQuantity] = useState<number>(1);
+  const [note, setNote] = useState('');
+  const [stockOutType, setStockOutType] = useState<StockOutType | ''>('');
+  const [variantId, setVariantId] = useState<number | undefined>(undefined);
+  const [salePrice, setSalePrice] = useState('');
+
+  // Gift items
+  const [gifts, setGifts] = useState<GiftItemState[]>([]);
+
+  // Debt fields
+  const [debtorName, setDebtorName] = useState('');
+  const [paidAmount, setPaidAmount] = useState('');
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [done, setDone] = useState(false);
+
+  const [products, setProducts] = useState<ProductSummary[]>([]);
+  const [productSearch, setProductSearch] = useState('');
+  const [variantSearch, setVariantSearch] = useState('');
+
+  useEffect(() => {
+    getProductsAction().then(setProducts);
+  }, []);
+
+  const selectedProduct = products.find((p) => p.id === productId);
+  const hasVariants = (selectedProduct?.variants?.length ?? 0) > 0;
+  const selectedVariant = selectedProduct?.variants?.find((v) => v.id === variantId);
+  const effectivePrice = selectedVariant?.effectivePrice ?? selectedProduct?.price;
+
+  const isRetailOrWholesale = stockOutType === 'retail' || stockOutType === 'wholesale';
+
+  const productInputValue = productId && !productSearch
+    ? (selectedProduct?.name ?? '')
+    : productSearch;
+
+  const filteredProducts = productSearch
+    ? products.filter((p) => p.name.toLowerCase().includes(productSearch.toLowerCase()))
+    : products;
+
+  const filteredVariants = variantSearch
+    ? (selectedProduct?.variants ?? []).filter((v) =>
+        v.name.toLowerCase().includes(variantSearch.toLowerCase())
+      )
+    : (selectedProduct?.variants ?? []);
+
+  function handleProductChange(v: number) {
+    setProductId(v);
+    setProductSearch('');
+    setVariantId(undefined);
+    setVariantSearch('');
+    setSalePrice('');
+    setErrors((prev) => ({ ...prev, productId: '' }));
+  }
+
+  // Gift item helpers
+  function addGift() {
+    setGifts((prev) => [...prev, newGiftItem()]);
+  }
+
+  function removeGift(id: string) {
+    setGifts((prev) => prev.filter((g) => g.id !== id));
+  }
+
+  function updateGift(id: string, patch: Partial<GiftItemState>) {
+    setGifts((prev) => prev.map((g) => g.id === id ? { ...g, ...patch } : g));
+  }
+
+  const handleSubmit = useCallback(async () => {
+    const e: Record<string, string> = {};
+    if (!productId) e.productId = tCommon('required');
+    if (!quantity || quantity < 1) e.quantity = tCommon('required');
+    if (!stockOutType) e.stockOutType = tCommon('required');
+
+    if (Object.keys(e).filter((k) => e[k]).length) {
+      setErrors(e);
+      return;
+    }
+
+    // Build gift items
+    const giftItems: GiftItemInput[] = gifts
+      .filter((g) => g.productId > 0 && g.quantity > 0)
+      .map((g) => ({
+        productId: g.productId,
+        variantId: g.variantId,
+        quantity: g.quantity,
+      }));
+
+    setIsSubmitting(true);
+    try {
+      const result = await createStockOutAction({
+        productId,
+        quantity,
+        note: note || undefined,
+        userId: session?.user?.id ?? '',
+        stockOutType: stockOutType as StockOutType,
+        variantId,
+        salePrice: salePrice ? Number(salePrice) : undefined,
+        gifts: giftItems.length > 0 ? giftItems : undefined,
+        debtorName: isRetailOrWholesale && debtorName ? debtorName : undefined,
+        paidAmount: isRetailOrWholesale && paidAmount ? Number(paidAmount) : undefined,
+      });
+      if (!result.success) {
+        toast.error(tCommon(getErrorKey(result.error)));
+        return;
+      }
+      toast.success(t('submitSuccess'));
+      setDone(true);
+    } catch {
+      toast.error(tCommon('error'));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [
+    productId, quantity, note, stockOutType, variantId, salePrice,
+    gifts, debtorName, paidAmount, isRetailOrWholesale, session, t, tCommon,
+  ]);
+
+  function handleReset() {
+    setProductId(0);
+    setQuantity(1);
+    setNote('');
+    setStockOutType('');
+    setVariantId(undefined);
+    setSalePrice('');
+    setGifts([]);
+    setDebtorName('');
+    setPaidAmount('');
+    setProductSearch('');
+    setVariantSearch('');
+    setErrors({});
+    setDone(false);
+  }
+
+  function handleClose() {
+    const params = new URLSearchParams(window.location.search);
+    const backTo = (params.get('back') ?? '/menu') as Parameters<typeof router.push>[0];
+    router.push(backTo);
+  }
 
   if (done) {
     return (
@@ -55,21 +221,51 @@ export function StockOutClient() {
 
   return (
     <div className="space-y-4 px-4 py-4">
+      {/* Stock-out type selector */}
+      <FormField label="Loại xuất kho" required error={errors.stockOutType}>
+        <Select
+          value={stockOutType}
+          onValueChange={(v) => {
+            setStockOutType(v as StockOutType);
+            setErrors((prev) => ({ ...prev, stockOutType: '' }));
+            // Reset gift/debt when switching to transfer
+            if (v === 'transfer') {
+              setGifts([]);
+              setDebtorName('');
+              setPaidAmount('');
+            }
+          }}
+        >
+          <SelectTrigger className="w-full" aria-invalid={!!errors.stockOutType}>
+            <SelectValue placeholder="Chọn loại xuất kho" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="retail">Bán lẻ</SelectItem>
+            <SelectItem value="wholesale">Bán sỉ</SelectItem>
+            <SelectItem value="transfer">Chuyển kho</SelectItem>
+          </SelectContent>
+        </Select>
+      </FormField>
+
+      {/* Product selector */}
       <FormField label={t('form.product')} required error={errors.productId}>
         <Combobox
-          value={values.productId || null}
-          onValueChange={(v) => set('productId', v as number)}
+          value={productId || null}
+          onValueChange={(v) => handleProductChange(v as number)}
         >
           <ComboboxInput
             placeholder={t('form.productPlaceholder')}
             value={productInputValue}
-            onChange={(e) => handleProductSearch(e.target.value)}
+            onChange={(e) => {
+              setProductSearch(e.target.value);
+              if (!e.target.value) handleProductChange(0);
+            }}
             aria-invalid={!!errors.productId}
           />
           <ComboboxContent>
             <ComboboxList>
               <ComboboxEmpty>{tCommon('noResults')}</ComboboxEmpty>
-              {products.map((p) => (
+              {filteredProducts.map((p) => (
                 <ComboboxItem key={p.id} value={p.id}>
                   <span className="flex-1 truncate">{p.name}</span>
                   <span className="ml-2 text-xs text-muted-foreground">{p.categoryName}</span>
@@ -85,28 +281,222 @@ export function StockOutClient() {
         )}
       </FormField>
 
+      {/* Variant selector */}
+      {hasVariants && (
+        <FormField label="Phân loại">
+          <Combobox
+            value={variantId ?? null}
+            onValueChange={(v) => {
+              setVariantId(v as number | undefined);
+              setVariantSearch('');
+              setSalePrice('');
+            }}
+          >
+            <ComboboxInput
+              placeholder="Chọn phân loại..."
+              value={variantId && !variantSearch
+                ? (selectedVariant?.name ?? '')
+                : variantSearch}
+              onChange={(e) => {
+                setVariantSearch(e.target.value);
+                if (!e.target.value) setVariantId(undefined);
+              }}
+            />
+            <ComboboxContent>
+              <ComboboxList>
+                <ComboboxEmpty>{tCommon('noResults')}</ComboboxEmpty>
+                {filteredVariants.map((v) => (
+                  <ComboboxItem key={v.id} value={v.id}>
+                    <span className="flex-1 truncate">{v.name}</span>
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      {v.effectivePrice.toLocaleString()}
+                    </span>
+                  </ComboboxItem>
+                ))}
+              </ComboboxList>
+            </ComboboxContent>
+          </Combobox>
+        </FormField>
+      )}
+
+      {/* Quantity */}
       <FormField label={t('form.quantity')} required error={errors.quantity} htmlFor={quantityId}>
         <Input
           id={quantityId}
           type="number"
           min={1}
           step={1}
-          value={values.quantity || ''}
-          onChange={(e) => set('quantity', Math.floor(Number(e.target.value)))}
+          value={quantity || ''}
+          onChange={(e) => {
+            setQuantity(Math.floor(Number(e.target.value)));
+            setErrors((prev) => ({ ...prev, quantity: '' }));
+          }}
           placeholder={t('form.quantityPlaceholder')}
           aria-invalid={!!errors.quantity}
         />
       </FormField>
 
+      {/* Sale price — only for retail/wholesale */}
+      {isRetailOrWholesale && (
+        <FormField label="Giá bán">
+          <Input
+            type="number"
+            min={0}
+            value={salePrice}
+            onChange={(e) => setSalePrice(e.target.value)}
+            placeholder={effectivePrice != null
+              ? `Mặc định: ${effectivePrice.toLocaleString()}`
+              : 'Giá bán (tùy chọn)'}
+          />
+        </FormField>
+      )}
+
+      {/* Note */}
       <FormField label={t('form.note')} htmlFor={noteId}>
         <Textarea
           id={noteId}
-          value={values.note}
-          onChange={(e) => set('note', e.target.value)}
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
           placeholder={t('form.notePlaceholder')}
           rows={3}
         />
       </FormField>
+
+      {/* Gift items — only for retail/wholesale */}
+      {isRetailOrWholesale && (
+        <div className="space-y-2 border-t pt-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium">Tặng phẩm</p>
+            <Button size="sm" variant="outline" onClick={addGift}>
+              <Plus className="h-3 w-3 mr-1" />
+              Thêm
+            </Button>
+          </div>
+          {gifts.map((gift) => {
+            const giftProduct = products.find((p) => p.id === gift.productId);
+            const giftHasVariants = (giftProduct?.variants?.length ?? 0) > 0;
+            const giftVariant = giftProduct?.variants?.find((v) => v.id === gift.variantId);
+            const giftProductInputValue = gift.productId && !gift.productSearch
+              ? (giftProduct?.name ?? '')
+              : gift.productSearch;
+            const filteredGiftVariants = gift.variantSearch
+              ? (giftProduct?.variants ?? []).filter((v) =>
+                  v.name.toLowerCase().includes(gift.variantSearch.toLowerCase())
+                )
+              : (giftProduct?.variants ?? []);
+
+            return (
+              <div key={gift.id} className="rounded-md border p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">Tặng phẩm</span>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-6 w-6 text-destructive"
+                    onClick={() => removeGift(gift.id)}
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
+                <Combobox
+                  value={gift.productId || null}
+                  onValueChange={(v) =>
+                    updateGift(gift.id, {
+                      productId: v as number,
+                      productSearch: '',
+                      variantId: undefined,
+                      variantSearch: '',
+                    })
+                  }
+                >
+                  <ComboboxInput
+                    placeholder="Chọn sản phẩm tặng..."
+                    value={giftProductInputValue}
+                    onChange={(e) => {
+                      updateGift(gift.id, { productSearch: e.target.value });
+                      if (!e.target.value) updateGift(gift.id, { productId: 0 });
+                    }}
+                  />
+                  <ComboboxContent>
+                    <ComboboxList>
+                      <ComboboxEmpty>{tCommon('noResults')}</ComboboxEmpty>
+                      {(gift.productSearch
+                        ? products.filter((p) =>
+                            p.name.toLowerCase().includes(gift.productSearch.toLowerCase())
+                          )
+                        : products
+                      ).map((p) => (
+                        <ComboboxItem key={p.id} value={p.id}>
+                          <span className="flex-1 truncate">{p.name}</span>
+                        </ComboboxItem>
+                      ))}
+                    </ComboboxList>
+                  </ComboboxContent>
+                </Combobox>
+                {giftHasVariants && (
+                  <Combobox
+                    value={gift.variantId ?? null}
+                    onValueChange={(v) =>
+                      updateGift(gift.id, { variantId: v as number | undefined, variantSearch: '' })
+                    }
+                  >
+                    <ComboboxInput
+                      placeholder="Phân loại (tùy chọn)..."
+                      value={gift.variantId && !gift.variantSearch
+                        ? (giftVariant?.name ?? '')
+                        : gift.variantSearch}
+                      onChange={(e) => {
+                        updateGift(gift.id, { variantSearch: e.target.value });
+                        if (!e.target.value) updateGift(gift.id, { variantId: undefined });
+                      }}
+                    />
+                    <ComboboxContent>
+                      <ComboboxList>
+                        <ComboboxEmpty>{tCommon('noResults')}</ComboboxEmpty>
+                        {filteredGiftVariants.map((v) => (
+                          <ComboboxItem key={v.id} value={v.id}>
+                            {v.name}
+                          </ComboboxItem>
+                        ))}
+                      </ComboboxList>
+                    </ComboboxContent>
+                  </Combobox>
+                )}
+                <Input
+                  type="number"
+                  min={1}
+                  value={gift.quantity}
+                  onChange={(e) => updateGift(gift.id, { quantity: Number(e.target.value) })}
+                  placeholder="Số lượng"
+                />
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Debt section — only for retail/wholesale */}
+      {isRetailOrWholesale && (
+        <div className="space-y-3 border-t pt-3">
+          <p className="text-sm font-medium">Ghi nợ (tùy chọn)</p>
+          <FormField label="Tên khách nợ">
+            <Input
+              value={debtorName}
+              onChange={(e) => setDebtorName(e.target.value)}
+              placeholder="Tên khách hàng..."
+            />
+          </FormField>
+          <FormField label="Đã thanh toán">
+            <Input
+              type="number"
+              min={0}
+              value={paidAmount}
+              onChange={(e) => setPaidAmount(e.target.value)}
+              placeholder="Số tiền đã trả (0 = chưa trả)"
+            />
+          </FormField>
+        </div>
+      )}
 
       <Button className="w-full" size="lg" onClick={handleSubmit} disabled={isSubmitting}>
         {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

@@ -49,9 +49,16 @@ function DrawerContent({
       <DrawerPrimitive.Content
         data-slot="drawer-content"
         aria-describedby={undefined}
+        // Prevent vaul from auto-focusing inside the drawer on open (avoids
+        // aria-hidden warning when trigger button retains focus during open animation)
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        // Blur focused element before close animation so vaul doesn't set
+        // aria-hidden on an ancestor of a focused element
+        onCloseAutoFocus={(e) => {
+          e.preventDefault();
+          (document.activeElement as HTMLElement)?.blur();
+        }}
         onAnimationEnd={(e) => {
-          // Blur any focused element before vaul sets aria-hidden to avoid
-          // "aria-hidden on focused element" accessibility warning
           if (e.currentTarget.dataset.state === 'closed') {
             (document.activeElement as HTMLElement)?.blur();
           }

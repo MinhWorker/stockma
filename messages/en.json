@@ -49,7 +49,13 @@
     "errInsufficientStock": "Insufficient stock",
     "errHasProducts": "Cannot delete: has linked products",
     "errHasTransactions": "Cannot delete: has linked transactions",
-    "errPriceBelowCost": "Retail price must be ≥ cost price"
+    "errPriceBelowCost": "Retail price must be ≥ cost price",
+    "errVariantDuplicateName": "A variant with this name already exists for this product",
+    "errVariantHasTransactions": "Cannot delete variant: has linked transactions",
+    "errVariantRequired": "This product has variants — please select a specific variant",
+    "errDebtAlreadyClosed": "This debt has already been closed",
+    "errInvalidPaymentAmount": "Payment amount must be greater than 0",
+    "errReturnQtyInvalid": "Return quantity is invalid"
   },
   "auth": {
     "signIn": "Sign In",
@@ -90,6 +96,15 @@
     "filterStatus": "Status",
     "allCategories": "All Categories",
     "allStatuses": "All Statuses",
+    "countLabel": "{count} products",
+    "statusAll": "All",
+    "statusActive": "In Stock",
+    "statusLowStock": "Low Stock",
+    "statusOutOfStock": "Out of Stock",
+    "stockLabel": "Stock: {qty}",
+    "providerLabel": "Provider",
+    "variantsTitle": "Variants",
+    "variantStock": "Stock",
     "columns": {
       "sku": "SKU",
       "name": "Product Name",
@@ -137,11 +152,18 @@
     "title": "Inventory",
     "newTransaction": "New Transaction",
     "searchPlaceholder": "Search by product name or SKU...",
+    "countLabel": "{count} transactions",
     "tabs": {
       "all": "All",
       "stockIn": "Stock In",
       "stockOut": "Stock Out",
       "adjustments": "Adjustments"
+    },
+    "dateGroups": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "thisWeek": "This week",
+      "thisMonth": "This month"
     },
     "columns": {
       "date": "Date",
@@ -163,7 +185,12 @@
       "quantity": "Quantity",
       "quantityPlaceholder": "Enter quantity",
       "note": "Note",
-      "notePlaceholder": "Optional note"
+      "notePlaceholder": "Optional note",
+      "variant": "Variant",
+      "variantPlaceholder": "Select variant...",
+      "purchasePrice": "Purchase price",
+      "purchasePriceDefault": "Default",
+      "purchasePricePlaceholder": "Purchase price (optional)"
     },
     "submitSuccess": "Transaction recorded successfully",
     "emptyTitle": "No transactions yet",
@@ -197,12 +224,22 @@
       "date": "Date",
       "type": "Type",
       "product": "Product",
+      "variant": "Variant",
       "sku": "SKU",
       "quantity": "Quantity",
       "stockBefore": "Stock Before",
       "stockAfter": "Stock After",
       "user": "Performed By",
-      "note": "Note"
+      "note": "Note",
+      "salePrice": "Sale Price",
+      "purchasePrice": "Purchase Price",
+      "stockOutType": "Method",
+      "isGift": "Gift item",
+      "stockOutTypes": {
+        "retail": "Retail",
+        "wholesale": "Wholesale",
+        "transfer": "Transfer"
+      }
     },
     "emptyTitle": "No transactions found",
     "emptyDesc": "Transactions will appear here once inventory movements are recorded",
@@ -218,11 +255,27 @@
     "reportTypePlaceholder": "Select report type",
     "dateFrom": "From",
     "dateTo": "To",
+    "dateRangeError": "Start date cannot be after end date",
+    "allInventories": "All Warehouses",
+    "allInventoriesLabel": "All",
+    "inventorySection": "Warehouse",
+    "reportTypeSection": "Report Type",
+    "noData": "No data",
+    "noDataInRange": "No data in this date range",
     "types": {
       "inventorySummary": "Inventory Summary",
       "stockMovement": "Stock Movement",
       "lowStock": "Low Stock Report",
-      "valuation": "Valuation Report"
+      "valuation": "Valuation Report",
+      "overview": "Overview",
+      "overviewDesc": "Revenue, profit, inventory",
+      "stockMovementDesc": "Stock in, out, adjustments by product",
+      "products": "By Product",
+      "productsDesc": "Revenue and stock per item",
+      "providers": "By Provider",
+      "providersDesc": "Purchase costs by supplier",
+      "debt": "Debt",
+      "debtDesc": "Debt list and status"
     },
     "columns": {
       "product": "Product",
@@ -236,6 +289,65 @@
       "closingStock": "Closing Stock",
       "reorderLevel": "Reorder Level",
       "totalValue": "Total Value"
+    },
+    "overview": {
+      "title": "Overview",
+      "sectionStock": "Inventory",
+      "sectionRevenue": "Revenue",
+      "sectionProfit": "Profit",
+      "sectionDebt": "Debt",
+      "totalProducts": "Total Products",
+      "outOfStock": "Out of Stock",
+      "stockValue": "Stock Value",
+      "transactions": "Transactions",
+      "transactionsSub": "{stockIn} in · {stockOut} out",
+      "estimatedRevenue": "Estimated Revenue",
+      "estimatedRevenueSub": "Total sale price",
+      "actualRevenue": "Actual Revenue",
+      "actualRevenueSub": "Collected",
+      "totalCost": "Purchase Cost",
+      "estimatedProfit": "Estimated Profit",
+      "actualProfit": "Actual Profit",
+      "openDebt": "Outstanding",
+      "totalDebt": "Total Owed"
+    },
+    "stockMovement": {
+      "title": "Stock Movement",
+      "countLabel": "{count} products with movement",
+      "stockIn": "in",
+      "stockOut": "out",
+      "adjustment": "adjustment",
+      "netChange": "Net change",
+      "estimatedRevenue": "Est. revenue"
+    },
+    "products": {
+      "title": "By Product",
+      "countLabel": "{count} products",
+      "stock": "Stock",
+      "stockIn": "In",
+      "stockOut": "Out",
+      "estimatedRevenue": "Est. revenue",
+      "actualRevenue": "Act. revenue",
+      "totalCost": "Purchase cost",
+      "emptyDesc": "No products"
+    },
+    "providers": {
+      "title": "By Provider",
+      "countLabel": "{count} providers",
+      "productsCount": "{count} items",
+      "stockValue": "Stock value",
+      "stockIn": "Received",
+      "totalCost": "Purchase cost",
+      "emptyDesc": "No data"
+    },
+    "debt": {
+      "title": "Debt",
+      "openSummary": "{count} outstanding debts",
+      "remaining": "{amount} remaining",
+      "statusOpen": "Outstanding",
+      "statusClosed": "Collected",
+      "statusCancelled": "Cancelled",
+      "emptyDesc": "No debt records"
     },
     "emptyTitle": "No report generated",
     "emptyDesc": "Select a report type and date range, then click Generate",
@@ -294,14 +406,31 @@
   },
   "dashboard": {
     "title": "Dashboard",
+    "allInventories": "All",
     "stats": {
-      "totalProducts": "Total Products",
+      "totalProducts": "Products",
+      "outOfStock": "{count} out of stock",
+      "inStock": "In stock",
+      "transactionsToday": "Today's transactions",
+      "recentCount": "{count} recent",
+      "stockValue": "Stock Value",
+      "actualRevenue": "Actual Revenue",
+      "estimatedRevenueSub": "Est: {value}",
+      "actualProfit": "Actual Profit",
+      "estimatedProfitSub": "Est: {value}",
+      "openDebt": "Outstanding Debt",
+      "openDebtCount": "{count} debts",
+      "noDebt": "No debt",
       "lowStockItems": "Low Stock Items",
-      "totalValue": "Total Inventory Value",
-      "transactionsToday": "Transactions Today"
+      "totalValue": "Total Inventory Value"
     },
-    "lowStockProducts": "Low Stock Products",
+    "chart7Days": "7-day movement",
+    "chartStockIn": "In",
+    "chartStockOut": "Out",
+    "topProducts": "Top selling products",
+    "soldQty": "Sold: {qty}",
     "recentTransactions": "Recent Transactions",
+    "lowStockProducts": "Low Stock Products",
     "emptyLowStock": "No low stock items",
     "emptyLowStockDesc": "All products are sufficiently stocked",
     "emptyTransactions": "No transactions yet",
@@ -332,6 +461,8 @@
       "stockInDesc": "Record incoming inventory",
       "stockOut": "Stock Out",
       "stockOutDesc": "Record outgoing inventory",
+      "order": "Create Order",
+      "orderDesc": "Create multiple stock-outs at once",
       "adjustment": "Adjustment",
       "adjustmentDesc": "Adjust stock quantities",
       "inventory": "View Stock",
@@ -351,7 +482,9 @@
       "providers": "Providers",
       "providersDesc": "Manage suppliers and providers",
       "settings": "Settings",
-      "settingsDesc": "Configure app and account"
+      "settingsDesc": "Configure app and account",
+      "activity": "Activity Log",
+      "activityDesc": "View system action history"
     }
   },
   "inventorySetup": {
@@ -425,6 +558,63 @@
   },
   "loading": {
     "message": "Loading..."
+  },
+  "order": {
+    "title": "Create Stock-Out Order",
+    "searchPlaceholder": "Search products...",
+    "selectedCount": "{count} products selected",
+    "reviewBtn": "Review order ({count})",
+    "confirmBtn": "Confirm {count} stock-out(s)",
+    "globalFields": "Common fields",
+    "stockOutType": "Type",
+    "stockOutTypePlaceholder": "Select type",
+    "note": "Note",
+    "notePlaceholder": "Optional note...",
+    "debtorName": "Debtor name",
+    "debtorNamePlaceholder": "Enter name...",
+    "paidAmount": "Amount paid upfront",
+    "itemsTitle": "Selected products",
+    "qty": "Quantity",
+    "salePrice": "Sale price",
+    "salePricePlaceholder": "Default from product",
+    "variant": "Variant",
+    "variantPlaceholder": "Select variant",
+    "removeItem": "Remove",
+    "stockOutTypes": {
+      "retail": "Retail",
+      "wholesale": "Wholesale",
+      "transfer": "Transfer"
+    },
+    "emptyTitle": "No products selected",
+    "emptyDesc": "Select products from the list to add to the order",
+    "successToast": "{count} stock-out(s) created",
+    "errRequired": "Please select a stock-out type",
+    "errQty": "Quantity must be greater than 0",
+    "stock": "Stock: {qty}",
+    "allCategories": "All",
+    "countLabel": "{count} products"
+  },
+  "activity": {
+    "title": "Activity Log",
+    "searchPlaceholder": "Search by description, name, user...",
+    "clearSearch": "Clear search",
+    "countLabel": "{count} activities",
+    "emptyTitle": "No activities found",
+    "emptyDesc": "Try adjusting your filters or search term",
+    "system": "System",
+    "tabs": {
+      "all": "All",
+      "create": "Created",
+      "update": "Updated",
+      "delete": "Deleted",
+      "export": "Exported"
+    },
+    "actions": {
+      "create": "Created",
+      "update": "Updated",
+      "delete": "Deleted",
+      "export": "Exported"
+    }
   },
   "status": {
     "active": "Active",

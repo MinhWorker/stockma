@@ -7,12 +7,11 @@ import { useRouter, usePathname } from '@/i18n/routing';
 import type { TransactionRecord, TransactionType } from '@/services/types';
 
 interface InventoryState {
-  inputValue: string; // controlled input — updates instantly
-  search: string; // debounced URL value — used for filtering
+  inputValue: string;
+  search: string;
   tab: 'all' | TransactionType;
   selectedTx: TransactionRecord | null;
   detailOpen: boolean;
-  formOpen: boolean;
 }
 
 interface InventoryActions {
@@ -20,8 +19,6 @@ interface InventoryActions {
   setTab: (v: 'all' | TransactionType) => void;
   openDetail: (tx: TransactionRecord) => void;
   closeDetail: () => void;
-  openForm: () => void;
-  closeForm: () => void;
 }
 
 interface InventoryContextValue {
@@ -37,11 +34,7 @@ export function useInventory() {
   return ctx;
 }
 
-interface Props {
-  children: ReactNode;
-}
-
-export function InventoryProvider({ children }: Props) {
+export function InventoryProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -51,34 +44,27 @@ export function InventoryProvider({ children }: Props) {
 
   const [selectedTx, setSelectedTx] = useState<TransactionRecord | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
-  const [formOpen, setFormOpen] = useState(false);
 
-  const setTab = useCallback(
-    (v: string) => {
-      const params = new URLSearchParams(window.location.search);
-      if (v === 'all') params.delete('tab');
-      else params.set('tab', v);
-      const qs = params.toString();
-      router.replace(`${pathname}${qs ? `?${qs}` : ''}` as Parameters<typeof router.replace>[0], {
-        scroll: false,
-      });
-    },
-    [router, pathname]
-  );
+  const setTab = useCallback((v: string) => {
+    const params = new URLSearchParams(window.location.search);
+    if (v === 'all') params.delete('tab');
+    else params.set('tab', v);
+    const qs = params.toString();
+    router.replace(`${pathname}${qs ? `?${qs}` : ''}` as Parameters<typeof router.replace>[0], { scroll: false });
+  }, [router, pathname]);
 
   const openDetail = useCallback((tx: TransactionRecord) => {
     setSelectedTx(tx);
     setDetailOpen(true);
   }, []);
+
   const closeDetail = useCallback(() => setDetailOpen(false), []);
-  const openForm = useCallback(() => setFormOpen(true), []);
-  const closeForm = useCallback(() => setFormOpen(false), []);
 
   const contextValue = useMemo<InventoryContextValue>(() => ({
-    state: { inputValue, search, tab, selectedTx, detailOpen, formOpen },
-    actions: { setInputValue, setTab, openDetail, closeDetail, openForm, closeForm },
-  }), [inputValue, search, tab, selectedTx, detailOpen, formOpen,
-      setInputValue, setTab, openDetail, closeDetail, openForm, closeForm]);
+    state: { inputValue, search, tab, selectedTx, detailOpen },
+    actions: { setInputValue, setTab, openDetail, closeDetail },
+  }), [inputValue, search, tab, selectedTx, detailOpen,
+      setInputValue, setTab, openDetail, closeDetail]);
 
   return (
     <InventoryContext value={contextValue}>

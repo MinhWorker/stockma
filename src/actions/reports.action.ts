@@ -39,8 +39,8 @@ export async function generateReportAction(
 
     const from = input.dateFrom ? new Date(input.dateFrom).getTime() : null;
     const to = input.dateTo ? new Date(input.dateTo + 'T23:59:59').getTime() : null;
-    const inRange = (d: Date) => {
-      const t = d.getTime();
+    const inRange = (d: Date | string) => {
+      const t = new Date(d).getTime();
       return (!from || t >= from) && (!to || t <= to);
     };
 
@@ -49,9 +49,7 @@ export async function generateReportAction(
     if (input.type === 'inventorySummary') {
       const totalStock = products.reduce((s, p) => s + p.stockQty, 0);
       const totalValue = products.reduce((s, p) => s + p.stockQty * p.costPrice, 0);
-      const lowCount = products.filter(
-        (p) => p.status === 'low_stock' || p.status === 'out_of_stock'
-      ).length;
+      const lowCount = products.filter((p) => p.status === 'out_of_stock').length;
       rows = [
         { label: 'Tổng sản phẩm', value: products.length },
         { label: 'Tổng tồn kho', value: totalStock },
@@ -73,10 +71,10 @@ export async function generateReportAction(
         { label: 'Tổng giao dịch', value: filtered.length },
       ];
     } else if (input.type === 'lowStock') {
-      const low = products.filter((p) => p.status === 'low_stock' || p.status === 'out_of_stock');
+      const low = products.filter((p) => p.status === 'out_of_stock');
       rows =
         low.length > 0
-          ? low.map((p) => ({ label: p.name, value: `${p.stockQty} / ${p.reorderLevel}` }))
+          ? low.map((p) => ({ label: p.name, value: `Tồn: ${p.stockQty}` }))
           : [{ label: 'Không có sản phẩm sắp hết hàng', value: '' }];
     } else {
       // valuation by category

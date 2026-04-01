@@ -1,65 +1,73 @@
 import { Suspense } from 'react';
-import { getTranslations } from 'next-intl/server';
 import { getDashboardStats } from '@/services/dashboard.service';
+import { getAllInventories } from '@/services/inventory.service';
 import { MobileDashboardClient } from './_components/mobile-dashboard-client';
 
-export default async function MobileDashboardPage() {
-  const t = await getTranslations('dashboard');
-  const statsPromise = getDashboardStats();
+export const dynamic = 'force-dynamic';
+
+interface Props {
+  searchParams: Promise<{ inv?: string }>;
+}
+
+export default async function MobileDashboardPage({ searchParams }: Props) {
+  const { inv } = await searchParams;
+  const inventoryId = inv ? Number(inv) : undefined;
+
+  const [inventories] = await Promise.all([
+    getAllInventories(),
+  ]);
+  const statsPromise = getDashboardStats(inventoryId);
 
   return (
     <div className="space-y-0">
-      <h1 className="px-4 pt-1 pb-3 text-xl font-semibold">{t('title')}</h1>
+      <h1 className="px-4 pt-1 pb-3 text-xl font-semibold">Tổng quan</h1>
       <Suspense fallback={<DashboardSkeleton />}>
-        <DashboardData statsPromise={statsPromise} />
+        <DashboardData statsPromise={statsPromise} inventories={inventories} selectedInventoryId={inventoryId} />
       </Suspense>
     </div>
   );
 }
 
-async function DashboardData({ statsPromise }: { statsPromise: ReturnType<typeof getDashboardStats> }) {
+async function DashboardData({
+  statsPromise,
+  inventories,
+  selectedInventoryId,
+}: {
+  statsPromise: ReturnType<typeof getDashboardStats>;
+  inventories: Awaited<ReturnType<typeof getAllInventories>>;
+  selectedInventoryId?: number;
+}) {
   const stats = await statsPromise;
-  return <MobileDashboardClient stats={stats} />;
+  return <MobileDashboardClient stats={stats} inventories={inventories} selectedInventoryId={selectedInventoryId} />;
 }
 
 function DashboardSkeleton() {
   return (
-    <div className="space-y-6 pb-4">
-      {/* Stats cards */}
-      <section className="mx-4">
-        <div className="divide-y divide-border/60 rounded-2xl border border-border overflow-hidden">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-4 px-4 py-3.5">
-              <div className="h-10 w-10 rounded-xl animate-shimmer shrink-0" />
-              <div className="flex-1 space-y-2">
-                <div className="h-2.5 w-20 rounded-md animate-shimmer" />
-                <div className="h-5 w-14 rounded-md animate-shimmer" />
-              </div>
-              <div className="h-4 w-10 rounded-md animate-shimmer" />
-            </div>
+    <div className="space-y-5 pb-8 px-4">
+      {/* Inventory chips */}
+      <div className="flex gap-2 -mx-4 px-4 overflow-x-auto scrollbar-none py-1">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="h-7 w-20 rounded-full animate-shimmer shrink-0" />
+        ))}
+      </div>
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 gap-3">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="rounded-2xl bg-muted/50 p-4 space-y-2">
+            <div className="h-2.5 w-16 rounded animate-shimmer" />
+            <div className="h-6 w-24 rounded animate-shimmer" />
+          </div>
+        ))}
+      </div>
+      {/* Chart skeleton */}
+      <div className="rounded-2xl border border-border p-4 space-y-3">
+        <div className="h-3 w-28 rounded animate-shimmer" />
+        <div className="flex items-end gap-1.5 h-24">
+          {Array.from({ length: 7 }).map((_, i) => (
+            <div key={i} className="flex-1 rounded-t animate-shimmer" style={{ height: `${40 + i * 8}%` }} />
           ))}
         </div>
-      </section>
-
-      {/* Recent transactions */}
-      <section className="space-y-1">
-        <div className="px-4 mb-2 h-3 w-36 rounded-md animate-shimmer" />
-        <div className="space-y-px">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-3 px-4 py-3">
-              <div className="h-10 w-10 rounded-full animate-shimmer shrink-0" />
-              <div className="flex-1 space-y-2">
-                <div className="h-3 w-2/3 rounded-md animate-shimmer" />
-                <div className="h-2.5 w-1/3 rounded-md animate-shimmer" />
-              </div>
-              <div className="flex flex-col items-end gap-1.5">
-                <div className="h-3 w-12 rounded-md animate-shimmer" />
-                <div className="h-2.5 w-8 rounded-full animate-shimmer" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
+      </div>
     </div>
   );
 }

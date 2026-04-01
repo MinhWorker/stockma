@@ -2,10 +2,10 @@ import 'server-only';
 import webpush from 'web-push';
 import { prisma } from '@/lib/db';
 
-const vapidConfigured =
+const isVapidConfigured =
   !!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && !!process.env.VAPID_PRIVATE_KEY;
 
-if (vapidConfigured) {
+if (isVapidConfigured) {
   webpush.setVapidDetails(
     'mailto:admin@stockma.app',
     process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
@@ -50,22 +50,8 @@ export async function saveSubscription(
 ): Promise<void> {
   await prisma.pushSubscription.upsert({
     where: { endpoint: sub.endpoint },
-    create: {
-      userId,
-      endpoint: sub.endpoint,
-      p256dh: sub.p256dh,
-      auth: sub.auth,
-      lowStock: prefs.lowStock,
-      stockOut: prefs.stockOut,
-      newTransaction: prefs.newTransaction,
-    },
-    update: {
-      p256dh: sub.p256dh,
-      auth: sub.auth,
-      lowStock: prefs.lowStock,
-      stockOut: prefs.stockOut,
-      newTransaction: prefs.newTransaction,
-    },
+    create: { userId, endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth, ...prefs },
+    update: { p256dh: sub.p256dh, auth: sub.auth, ...prefs },
   });
 }
 
@@ -77,20 +63,14 @@ export async function updatePreferences(
   endpoint: string,
   prefs: NotificationPreferences
 ): Promise<void> {
-  await prisma.pushSubscription.updateMany({
-    where: { endpoint },
-    data: prefs,
-  });
+  await prisma.pushSubscription.updateMany({ where: { endpoint }, data: prefs });
 }
 
 export async function updatePreferencesByUserId(
   userId: string,
   prefs: NotificationPreferences
 ): Promise<void> {
-  await prisma.pushSubscription.updateMany({
-    where: { userId },
-    data: prefs,
-  });
+  await prisma.pushSubscription.updateMany({ where: { userId }, data: prefs });
 }
 
 export async function getSubscriptionByEndpoint(endpoint: string) {
@@ -105,14 +85,12 @@ export async function getSubscriptionsByUserId(userId: string) {
 // Sending notifications
 // ---------------------------------------------------------------------------
 
-/**
- * Send a push notification to all subscribers that have the given event enabled.
- */
 export async function sendNotificationToAll(
   event: NotificationEvent,
   payload: PushPayload
 ): Promise<void> {
-  if (!vapidConfigured) return;
+  if (!isVapidConfigured) return;
+
   const subscriptions = await prisma.pushSubscription.findMany({
     where: { [event]: true },
   });
@@ -120,23 +98,29 @@ export async function sendNotificationToAll(
   const message = JSON.stringify(payload);
 
   await Promise.allSettled(
-    subscriptions.map(async (sub) => {
-      try {
-        await webpush.sendNotification(
-          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-          message
-        );
-      } catch (err: unknown) {
-        // 410 Gone = subscription expired, clean it up
-        if (
-          err &&
-          typeof err === 'object' &&
-          'statusCode' in err &&
-          (err as { statusCode: number }).statusCode === 410
-        ) {
-          await prisma.pushSubscription.delete({ where: { id: sub.id } });
-        }
-      }
-    })
+    subscriptions.map((sub) => sendToSubscription(sub, message))
   );
+}
+
+async function sendToSubscription(
+  sub: { id: number; endpoint: string; p256dh: string; auth: string },
+  message: string
+): Promise<void> {
+  try {
+    await webpush.sendNotification(
+      { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+      message
+    );
+  } catch (err: unknown) {
+    // 410 Gone means the subscription has expired — remove it
+    const isExpired =
+      err &&
+      typeof err === 'object' &&
+      'statusCode' in err &&
+      (err as { statusCode: number }).statusCode === 410;
+
+    if (isExpired) {
+      await prisma.pushSubscription.delete({ where: { id: sub.id } });
+    }
+  }
 }

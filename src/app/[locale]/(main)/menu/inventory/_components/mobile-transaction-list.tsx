@@ -1,23 +1,25 @@
+'use client';
+
+import { useTranslations } from 'next-intl';
 import type { TransactionRecord } from '@/services/types';
 import { MobileTransactionCard } from './mobile-transaction-card';
 import { Warehouse } from 'lucide-react';
+import { formatMonthYear } from '@/lib/utils';
 
-function groupByDate(
-  transactions: TransactionRecord[]
-): { label: string; items: TransactionRecord[] }[] {
+function useGroupByDate(transactions: TransactionRecord[], t: ReturnType<typeof useTranslations<'inventory.dateGroups'>>) {
   const map = new Map<string, TransactionRecord[]>();
 
   for (const tx of transactions) {
-    const d = tx.createdAt;
+    const d = new Date(tx.createdAt);
     const now = new Date();
     const diffDays = Math.floor((now.getTime() - d.getTime()) / 86400000);
 
     let label: string;
-    if (diffDays === 0) label = 'Hôm nay';
-    else if (diffDays === 1) label = 'Hôm qua';
-    else if (diffDays < 7) label = 'Tuần này';
-    else if (diffDays < 30) label = 'Tháng này';
-    else label = d.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' });
+    if (diffDays === 0) label = t('today');
+    else if (diffDays === 1) label = t('yesterday');
+    else if (diffDays < 7) label = t('thisWeek');
+    else if (diffDays < 30) label = t('thisMonth');
+    else label = formatMonthYear(d);
 
     if (!map.has(label)) map.set(label, []);
     map.get(label)!.push(tx);
@@ -34,6 +36,8 @@ interface Props {
 }
 
 export function MobileTransactionList({ transactions, emptyTitle, emptyDesc, onSelect }: Props) {
+  const t = useTranslations('inventory.dateGroups');
+
   if (transactions.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
@@ -48,7 +52,7 @@ export function MobileTransactionList({ transactions, emptyTitle, emptyDesc, onS
     );
   }
 
-  const groups = groupByDate(transactions);
+  const groups = useGroupByDate(transactions, t);
 
   return (
     <div className="divide-y divide-border">

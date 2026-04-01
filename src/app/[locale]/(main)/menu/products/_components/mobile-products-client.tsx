@@ -5,20 +5,13 @@ import { Search, X, Package } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Input } from '@/components/ui/input';
 import type { ProductSummary, ProductStatus } from '@/services/types';
+
+type StatusFilter = 'all' | ProductStatus;
 import { MobileProductCard } from './mobile-product-card';
 import { ProductDetailDrawer } from './product-detail-drawer';
 import { MobileProductFormDrawer } from './mobile-product-form-drawer';
 import { Fab } from '../../inventory/_components/fab';
 import { ProductsProvider, useProducts } from './products-context';
-
-type StatusFilter = 'all' | ProductStatus;
-
-const STATUS_TABS: { value: StatusFilter; label: string }[] = [
-  { value: 'all', label: 'Tất cả' },
-  { value: 'active', label: 'Còn hàng' },
-  { value: 'low_stock', label: 'Sắp hết' },
-  { value: 'out_of_stock', label: 'Hết hàng' },
-];
 
 interface Props {
   initialData: ProductSummary[];
@@ -40,8 +33,13 @@ function ProductsShell({ initialData }: { initialData: ProductSummary[] }) {
   const tCommon = useTranslations('common');
   const { state, actions } = useProducts();
 
+  const STATUS_TABS: { value: StatusFilter; label: string }[] = [
+    { value: 'all', label: t('statusAll') },
+    { value: 'active', label: t('statusActive') },
+    { value: 'out_of_stock', label: t('statusOutOfStock') },
+  ];
+
   const filtered = useMemo(() => {
-    console.log('[ProductsShell] recomputing filtered, initialData length:', initialData.length, 'first item:', initialData[0]?.name, initialData[0]?.price);
     const q = state.search.toLowerCase();
     return initialData.filter((p) => {
       const matchSearch = !q || p.name.toLowerCase().includes(q);
@@ -95,7 +93,7 @@ function ProductsShell({ initialData }: { initialData: ProductSummary[] }) {
         ))}
       </div>
 
-      <p className="px-4 pb-1 text-xs text-muted-foreground">{filtered.length} sản phẩm</p>
+      <p className="px-4 pb-1 text-xs text-muted-foreground">{t('countLabel', { count: filtered.length })}</p>
 
       {/* List */}
       {filtered.length === 0 ? (

@@ -49,7 +49,13 @@
     "errInsufficientStock": "Không đủ hàng trong kho",
     "errHasProducts": "Không thể xóa vì đang có sản phẩm liên kết",
     "errHasTransactions": "Không thể xóa vì đang có giao dịch liên kết",
-    "errPriceBelowCost": "Giá bán phải lớn hơn hoặc bằng giá nhập"
+    "errPriceBelowCost": "Giá bán phải lớn hơn hoặc bằng giá nhập",
+    "errVariantRequired": "Sản phẩm này có phân loại, vui lòng chọn phân loại cụ thể",
+    "errVariantDuplicateName": "Tên phân loại đã tồn tại trong sản phẩm này",
+    "errVariantHasTransactions": "Không thể xóa phân loại vì đang có giao dịch liên kết",
+    "errDebtAlreadyClosed": "Khoản nợ này đã được đóng",
+    "errInvalidPaymentAmount": "Số tiền thanh toán phải lớn hơn 0",
+    "errReturnQtyInvalid": "Số lượng trả hàng không hợp lệ"
   },
   "auth": {
     "signIn": "Đăng nhập",
@@ -90,6 +96,15 @@
     "filterStatus": "Trạng thái",
     "allCategories": "Tất cả danh mục",
     "allStatuses": "Tất cả trạng thái",
+    "countLabel": "{count} sản phẩm",
+    "statusAll": "Tất cả",
+    "statusActive": "Còn hàng",
+    "statusLowStock": "Sắp hết",
+    "statusOutOfStock": "Hết hàng",
+    "stockLabel": "Tồn: {qty}",
+    "providerLabel": "Nhà cung cấp",
+    "variantsTitle": "Phân loại",
+    "variantStock": "Tồn kho",
     "columns": {
       "sku": "Mã SKU",
       "name": "Tên sản phẩm",
@@ -137,11 +152,18 @@
     "title": "Kho hàng",
     "newTransaction": "Giao dịch mới",
     "searchPlaceholder": "Tìm theo tên sản phẩm hoặc SKU...",
+    "countLabel": "{count} giao dịch",
     "tabs": {
       "all": "Tất cả",
       "stockIn": "Nhập kho",
       "stockOut": "Xuất kho",
       "adjustments": "Điều chỉnh"
+    },
+    "dateGroups": {
+      "today": "Hôm nay",
+      "yesterday": "Hôm qua",
+      "thisWeek": "Tuần này",
+      "thisMonth": "Tháng này"
     },
     "columns": {
       "date": "Ngày",
@@ -163,7 +185,12 @@
       "quantity": "Số lượng",
       "quantityPlaceholder": "Nhập số lượng",
       "note": "Ghi chú",
-      "notePlaceholder": "Ghi chú tùy chọn"
+      "notePlaceholder": "Ghi chú tùy chọn",
+      "variant": "Phân loại",
+      "variantPlaceholder": "Chọn phân loại...",
+      "purchasePrice": "Giá nhập",
+      "purchasePriceDefault": "Mặc định",
+      "purchasePricePlaceholder": "Giá nhập (tùy chọn)"
     },
     "submitSuccess": "Ghi nhận giao dịch thành công",
     "emptyTitle": "Chưa có giao dịch",
@@ -197,12 +224,22 @@
       "date": "Ngày",
       "type": "Loại",
       "product": "Sản phẩm",
+      "variant": "Phân loại",
       "sku": "Mã SKU",
       "quantity": "Số lượng",
       "stockBefore": "Tồn kho trước",
       "stockAfter": "Tồn kho sau",
       "user": "Thực hiện bởi",
-      "note": "Ghi chú"
+      "note": "Ghi chú",
+      "salePrice": "Giá bán",
+      "purchasePrice": "Giá nhập",
+      "stockOutType": "Hình thức",
+      "isGift": "Hàng tặng",
+      "stockOutTypes": {
+        "retail": "Bán lẻ",
+        "wholesale": "Bán sỉ",
+        "transfer": "Chuyển kho"
+      }
     },
     "emptyTitle": "Không tìm thấy giao dịch",
     "emptyDesc": "Giao dịch sẽ xuất hiện ở đây khi có biến động kho",
@@ -218,11 +255,27 @@
     "reportTypePlaceholder": "Chọn loại báo cáo",
     "dateFrom": "Từ ngày",
     "dateTo": "Đến ngày",
+    "dateRangeError": "Ngày bắt đầu không thể sau ngày kết thúc",
+    "allInventories": "Tất cả kho",
+    "allInventoriesLabel": "Tất cả",
+    "inventorySection": "Kho hàng",
+    "reportTypeSection": "Loại báo cáo",
+    "noData": "Không có dữ liệu",
+    "noDataInRange": "Không có dữ liệu trong khoảng thời gian này",
     "types": {
       "inventorySummary": "Tổng hợp tồn kho",
       "stockMovement": "Biến động kho",
       "lowStock": "Báo cáo hàng sắp hết",
-      "valuation": "Báo cáo định giá"
+      "valuation": "Báo cáo định giá",
+      "overview": "Tổng quan",
+      "overviewDesc": "Doanh thu, lợi nhuận, tồn kho",
+      "stockMovementDesc": "Nhập, xuất, điều chỉnh theo sản phẩm",
+      "products": "Theo sản phẩm",
+      "productsDesc": "Doanh thu và tồn kho từng mặt hàng",
+      "providers": "Theo nhà cung cấp",
+      "providersDesc": "Chi phí nhập hàng theo NCC",
+      "debt": "Công nợ",
+      "debtDesc": "Danh sách và trạng thái ghi nợ"
     },
     "columns": {
       "product": "Sản phẩm",
@@ -236,6 +289,65 @@
       "closingStock": "Tồn cuối kỳ",
       "reorderLevel": "Mức tái đặt hàng",
       "totalValue": "Tổng giá trị"
+    },
+    "overview": {
+      "title": "Tổng quan",
+      "sectionStock": "Tồn kho",
+      "sectionRevenue": "Doanh thu",
+      "sectionProfit": "Lợi nhuận",
+      "sectionDebt": "Công nợ",
+      "totalProducts": "Tổng sản phẩm",
+      "outOfStock": "Hết hàng",
+      "stockValue": "Giá trị tồn kho",
+      "transactions": "Giao dịch",
+      "transactionsSub": "{stockIn} nhập · {stockOut} xuất",
+      "estimatedRevenue": "Doanh thu ước tính",
+      "estimatedRevenueSub": "Tổng giá bán",
+      "actualRevenue": "Doanh thu thực tế",
+      "actualRevenueSub": "Đã thu tiền",
+      "totalCost": "Chi phí nhập hàng",
+      "estimatedProfit": "Lợi nhuận ước tính",
+      "actualProfit": "Lợi nhuận thực tế",
+      "openDebt": "Đang nợ",
+      "totalDebt": "Tổng còn nợ"
+    },
+    "stockMovement": {
+      "title": "Biến động kho",
+      "countLabel": "{count} sản phẩm có biến động",
+      "stockIn": "nhập",
+      "stockOut": "xuất",
+      "adjustment": "điều chỉnh",
+      "netChange": "Chênh lệch",
+      "estimatedRevenue": "Doanh thu ước tính"
+    },
+    "products": {
+      "title": "Theo sản phẩm",
+      "countLabel": "{count} sản phẩm",
+      "stock": "Tồn",
+      "stockIn": "Nhập",
+      "stockOut": "Xuất",
+      "estimatedRevenue": "DT ước tính",
+      "actualRevenue": "DT thực tế",
+      "totalCost": "Chi phí nhập",
+      "emptyDesc": "Không có sản phẩm"
+    },
+    "providers": {
+      "title": "Theo nhà cung cấp",
+      "countLabel": "{count} nhà cung cấp",
+      "productsCount": "{count} SP",
+      "stockValue": "Giá trị tồn",
+      "stockIn": "Đã nhập",
+      "totalCost": "Chi phí nhập",
+      "emptyDesc": "Không có dữ liệu"
+    },
+    "debt": {
+      "title": "Công nợ",
+      "openSummary": "{count} khoản đang nợ",
+      "remaining": "còn {amount}",
+      "statusOpen": "Đang nợ",
+      "statusClosed": "Đã thu",
+      "statusCancelled": "Đã hủy",
+      "emptyDesc": "Không có dữ liệu công nợ"
     },
     "emptyTitle": "Chưa có báo cáo",
     "emptyDesc": "Chọn loại báo cáo và khoảng thời gian, sau đó nhấn Tạo",
@@ -294,14 +406,31 @@
   },
   "dashboard": {
     "title": "Trang chủ",
+    "allInventories": "Tất cả",
     "stats": {
-      "totalProducts": "Tổng sản phẩm",
+      "totalProducts": "Sản phẩm",
+      "outOfStock": "{count} hết hàng",
+      "inStock": "Đủ hàng",
+      "transactionsToday": "Giao dịch hôm nay",
+      "recentCount": "{count} gần nhất",
+      "stockValue": "Giá trị tồn kho",
+      "actualRevenue": "DT thực tế",
+      "estimatedRevenueSub": "Ước tính: {value}",
+      "actualProfit": "Lợi nhuận thực tế",
+      "estimatedProfitSub": "Ước tính: {value}",
+      "openDebt": "Đang nợ",
+      "openDebtCount": "{count} khoản",
+      "noDebt": "Không có nợ",
       "lowStockItems": "Hàng sắp hết",
-      "totalValue": "Tổng giá trị tồn kho",
-      "transactionsToday": "Giao dịch hôm nay"
+      "totalValue": "Tổng giá trị tồn kho"
     },
-    "lowStockProducts": "Sản phẩm sắp hết hàng",
+    "chart7Days": "Biến động 7 ngày",
+    "chartStockIn": "Nhập",
+    "chartStockOut": "Xuất",
+    "topProducts": "Top sản phẩm bán chạy",
+    "soldQty": "Đã bán: {qty}",
     "recentTransactions": "Giao dịch gần đây",
+    "lowStockProducts": "Sản phẩm sắp hết hàng",
     "emptyLowStock": "Không có hàng sắp hết",
     "emptyLowStockDesc": "Tất cả sản phẩm đều có đủ hàng",
     "emptyTransactions": "Chưa có giao dịch",
@@ -332,6 +461,8 @@
       "stockInDesc": "Ghi nhận hàng nhập vào kho",
       "stockOut": "Xuất kho",
       "stockOutDesc": "Ghi nhận hàng xuất khỏi kho",
+      "order": "Tạo đơn xuất",
+      "orderDesc": "Tạo nhiều phiếu xuất kho cùng lúc",
       "adjustment": "Điều chỉnh",
       "adjustmentDesc": "Điều chỉnh số lượng tồn kho",
       "inventory": "Xem kho",
@@ -351,7 +482,9 @@
       "providers": "Nhà cung cấp",
       "providersDesc": "Quản lý nhà cung cấp",
       "settings": "Cài đặt",
-      "settingsDesc": "Cấu hình ứng dụng và tài khoản"
+      "settingsDesc": "Cấu hình ứng dụng và tài khoản",
+      "activity": "Lịch sử hoạt động",
+      "activityDesc": "Xem nhật ký thao tác trong hệ thống"
     }
   },
   "inventorySetup": {
@@ -425,6 +558,63 @@
   },
   "loading": {
     "message": "Đang tải..."
+  },
+  "order": {
+    "title": "Tạo đơn xuất kho",
+    "searchPlaceholder": "Tìm sản phẩm...",
+    "selectedCount": "Đã chọn {count} sản phẩm",
+    "reviewBtn": "Xem lại đơn ({count})",
+    "confirmBtn": "Xác nhận tạo {count} phiếu",
+    "globalFields": "Thông tin chung",
+    "stockOutType": "Loại xuất",
+    "stockOutTypePlaceholder": "Chọn loại xuất",
+    "note": "Ghi chú chung",
+    "notePlaceholder": "Ghi chú tùy chọn...",
+    "debtorName": "Tên người nợ",
+    "debtorNamePlaceholder": "Nhập tên...",
+    "paidAmount": "Đã trả trước",
+    "itemsTitle": "Sản phẩm đã chọn",
+    "qty": "Số lượng",
+    "salePrice": "Giá bán",
+    "salePricePlaceholder": "Mặc định theo sản phẩm",
+    "variant": "Phân loại",
+    "variantPlaceholder": "Chọn phân loại",
+    "removeItem": "Xóa",
+    "stockOutTypes": {
+      "retail": "Bán lẻ",
+      "wholesale": "Bán sỉ",
+      "transfer": "Chuyển kho"
+    },
+    "emptyTitle": "Chưa chọn sản phẩm",
+    "emptyDesc": "Chọn sản phẩm từ danh sách để thêm vào đơn",
+    "successToast": "Đã tạo {count} phiếu xuất kho",
+    "errRequired": "Vui lòng chọn loại xuất",
+    "errQty": "Số lượng phải lớn hơn 0",
+    "stock": "Tồn: {qty}",
+    "allCategories": "Tất cả",
+    "countLabel": "{count} sản phẩm"
+  },
+  "activity": {
+    "title": "Lịch sử hoạt động",
+    "searchPlaceholder": "Tìm theo mô tả, tên, người dùng...",
+    "clearSearch": "Xóa tìm kiếm",
+    "countLabel": "{count} hoạt động",
+    "emptyTitle": "Không tìm thấy hoạt động",
+    "emptyDesc": "Thử điều chỉnh bộ lọc hoặc từ khóa tìm kiếm",
+    "system": "Hệ thống",
+    "tabs": {
+      "all": "Tất cả",
+      "create": "Tạo mới",
+      "update": "Cập nhật",
+      "delete": "Xóa",
+      "export": "Xuất"
+    },
+    "actions": {
+      "create": "Tạo mới",
+      "update": "Cập nhật",
+      "delete": "Xóa",
+      "export": "Xuất"
+    }
   },
   "status": {
     "active": "Hoạt động",

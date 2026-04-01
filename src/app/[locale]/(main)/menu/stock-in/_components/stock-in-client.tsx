@@ -1,6 +1,10 @@
 'use client';
 
+import { useCallback, useEffect, useId, useState } from 'react';
+import { useRouter } from '@/i18n/routing';
 import { CheckCircle2, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -13,27 +17,119 @@ import {
   ComboboxItem,
   ComboboxEmpty,
 } from '@/components/ui/combobox';
-import { useTransactionForm } from '../../_hooks/use-transaction-form';
+import { getProductsAction } from '@/actions/products.action';
+import { createTransactionAction } from '@/actions/inventory.action';
+import { useSession } from '@/lib/auth-client';
+import { getErrorKey } from '@/lib/error-message';
+import type { ProductSummary } from '@/services/types';
 
 export function StockInClient() {
-  const {
-    values,
-    errors,
-    isSubmitting,
-    done,
-    products,
-    productInputValue,
-    handleProductSearch,
-    selectedProduct,
-    set,
-    handleSubmit,
-    handleReset,
-    handleClose,
-    quantityId,
-    noteId,
-    t,
-    tCommon,
-  } = useTransactionForm('stock_in');
+  const t = useTranslations('inventory');
+  const tCommon = useTranslations('common');
+  const router = useRouter();
+  const { data: session } = useSession();
+
+  const quantityId = useId();
+  const noteId = useId();
+
+  const [productId, setProductId] = useState<number>(0);
+  const [quantity, setQuantity] = useState<number>(1);
+  const [note, setNote] = useState('');
+  const [variantId, setVariantId] = useState<number | undefined>(undefined);
+  const [purchasePrice, setPurchasePrice] = useState('');
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [done, setDone] = useState(false);
+
+  const [products, setProducts] = useState<ProductSummary[]>([]);
+  const [productSearch, setProductSearch] = useState('');
+  const [variantSearch, setVariantSearch] = useState('');
+
+  useEffect(() => {
+    getProductsAction().then(setProducts);
+  }, []);
+
+  const selectedProduct = products.find((p) => p.id === productId);
+  const hasVariants = (selectedProduct?.variants?.length ?? 0) > 0;
+  const selectedVariant = selectedProduct?.variants?.find((v) => v.id === variantId);
+  const effectiveCostPrice = selectedVariant?.effectiveCostPrice ?? selectedProduct?.costPrice;
+
+  const productInputValue = productId && !productSearch
+    ? (selectedProduct?.name ?? '')
+    : productSearch;
+
+  const filteredProducts = productSearch
+    ? products.filter((p) => p.name.toLowerCase().includes(productSearch.toLowerCase()))
+    : products;
+
+  const filteredVariants = variantSearch
+    ? (selectedProduct?.variants ?? []).filter((v) =>
+        v.name.toLowerCase().includes(variantSearch.toLowerCase())
+      )
+    : (selectedProduct?.variants ?? []);
+
+  function handleProductChange(v: number) {
+    setProductId(v);
+    setProductSearch('');
+    setVariantId(undefined);
+    setVariantSearch('');
+    setPurchasePrice('');
+    setErrors((prev) => ({ ...prev, productId: '' }));
+  }
+
+  const handleSubmit = useCallback(async () => {
+    const e: Record<string, string> = {};
+    if (!productId) e.productId = tCommon('required');
+    if (!quantity || quantity < 1) e.quantity = tCommon('required');
+    // Rule: products with variants require a variant to be selected
+    if (hasVariants && !variantId) e.variantId = tCommon('required');
+    if (Object.keys(e).filter((k) => e[k]).length) {
+      setErrors(e);
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const result = await createTransactionAction({
+        type: 'stock_in',
+        productId,
+        quantity,
+        note: note || undefined,
+        userId: session?.user?.id ?? '',
+        variantId,
+        purchasePrice: purchasePrice ? Number(purchasePrice) : undefined,
+      });
+      if (!result.success) {
+        toast.error(tCommon(getErrorKey(result.error)));
+        return;
+      }
+      toast.success(t('submitSuccess'));
+      setDone(true);
+    } catch {
+      toast.error(tCommon('error'));
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [productId, quantity, note, variantId, purchasePrice, session, t, tCommon]);
+
+  function handleReset() {
+    setProductId(0);
+    setQuantity(1);
+    setNote('');
+    setVariantId(undefined);
+    setPurchasePrice('');
+    setProductSearch('');
+    setVariantSearch('');
+    setErrors({});
+    setDone(false);
+  }
+
+  function handleClose() {
+    const params = new URLSearchParams(window.location.search);
+    const backTo = (params.get('back') ?? '/menu') as Parameters<typeof router.push>[0];
+    router.push(backTo);
+  }
 
   if (done) {
     return (
@@ -57,19 +153,22 @@ export function StockInClient() {
     <div className="space-y-4 px-4 py-4">
       <FormField label={t('form.product')} required error={errors.productId}>
         <Combobox
-          value={values.productId || null}
-          onValueChange={(v) => set('productId', v as number)}
+          value={productId || null}
+          onValueChange={(v) => handleProductChange(v as number)}
         >
           <ComboboxInput
             placeholder={t('form.productPlaceholder')}
             value={productInputValue}
-            onChange={(e) => handleProductSearch(e.target.value)}
+            onChange={(e) => {
+              setProductSearch(e.target.value);
+              if (!e.target.value) handleProductChange(0);
+            }}
             aria-invalid={!!errors.productId}
           />
           <ComboboxContent>
             <ComboboxList>
               <ComboboxEmpty>{tCommon('noResults')}</ComboboxEmpty>
-              {products.map((p) => (
+              {filteredProducts.map((p) => (
                 <ComboboxItem key={p.id} value={p.id}>
                   <span className="flex-1 truncate">{p.name}</span>
                   <span className="ml-2 text-xs text-muted-foreground">{p.categoryName}</span>
@@ -85,24 +184,80 @@ export function StockInClient() {
         )}
       </FormField>
 
+      {/* Variant selector — required when product has variants */}
+      {hasVariants && (
+        <FormField label={t('form.variant')} required error={errors.variantId}>
+          <Combobox
+            value={variantId ?? null}
+            onValueChange={(v) => {
+              setVariantId(v as number | undefined);
+              setVariantSearch('');
+              setPurchasePrice('');
+              setErrors((prev) => ({ ...prev, variantId: '' }));
+            }}
+          >
+            <ComboboxInput
+              placeholder={t('form.variantPlaceholder')}
+              value={variantId && !variantSearch
+                ? (selectedVariant?.name ?? '')
+                : variantSearch}
+              onChange={(e) => {
+                setVariantSearch(e.target.value);
+                if (!e.target.value) setVariantId(undefined);
+              }}
+              aria-invalid={!!errors.variantId}
+            />
+            <ComboboxContent>
+              <ComboboxList>
+                <ComboboxEmpty>{tCommon('noResults')}</ComboboxEmpty>
+                {filteredVariants.map((v) => (
+                  <ComboboxItem key={v.id} value={v.id}>
+                    <span className="flex-1 truncate">{v.name}</span>
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      {v.effectiveCostPrice.toLocaleString()} / {v.effectivePrice.toLocaleString()}
+                    </span>
+                  </ComboboxItem>
+                ))}
+              </ComboboxList>
+            </ComboboxContent>
+          </Combobox>
+        </FormField>
+      )}
+
       <FormField label={t('form.quantity')} required error={errors.quantity} htmlFor={quantityId}>
         <Input
           id={quantityId}
           type="number"
           min={1}
           step={1}
-          value={values.quantity || ''}
-          onChange={(e) => set('quantity', Math.floor(Number(e.target.value)))}
+          value={quantity || ''}
+          onChange={(e) => {
+            setQuantity(Math.floor(Number(e.target.value)));
+            setErrors((prev) => ({ ...prev, quantity: '' }));
+          }}
           placeholder={t('form.quantityPlaceholder')}
           aria-invalid={!!errors.quantity}
+        />
+      </FormField>
+
+      {/* Purchase price — optional */}
+      <FormField label={t('form.purchasePrice')}>
+        <Input
+          type="number"
+          min={0}
+          value={purchasePrice}
+          onChange={(e) => setPurchasePrice(e.target.value)}
+          placeholder={effectiveCostPrice != null
+            ? `${t('form.purchasePriceDefault')}: ${effectiveCostPrice.toLocaleString()}`
+            : t('form.purchasePricePlaceholder')}
         />
       </FormField>
 
       <FormField label={t('form.note')} htmlFor={noteId}>
         <Textarea
           id={noteId}
-          value={values.note}
-          onChange={(e) => set('note', e.target.value)}
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
           placeholder={t('form.notePlaceholder')}
           rows={3}
         />

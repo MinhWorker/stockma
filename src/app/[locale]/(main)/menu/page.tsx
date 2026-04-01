@@ -16,6 +16,7 @@ export default async function MenuPage() {
     warehouse: {
       'stock-in': { label: t('actions.stockIn'), description: t('actions.stockInDesc') },
       'stock-out': { label: t('actions.stockOut'), description: t('actions.stockOutDesc') },
+      order: { label: t('actions.order'), description: t('actions.orderDesc') },
       adjustment: { label: t('actions.adjustment'), description: t('actions.adjustmentDesc') },
       inventory: { label: t('actions.inventory'), description: t('actions.inventoryDesc') },
     },
@@ -30,6 +31,7 @@ export default async function MenuPage() {
       reports: { label: t('actions.reports'), description: t('actions.reportsDesc') },
     },
     system: {
+      activity: { label: t('actions.activity'), description: t('actions.activityDesc') },
       settings: { label: t('actions.settings'), description: t('actions.settingsDesc') },
     },
   };

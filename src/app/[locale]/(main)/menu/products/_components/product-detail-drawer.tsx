@@ -15,13 +15,10 @@ import type { ProductSummary } from '@/services/types';
 
 const STATUS_VARIANT = {
   active: 'default',
-  low_stock: 'secondary',
   out_of_stock: 'destructive',
 } as const;
 
-function formatPrice(n: number) {
-  return n.toLocaleString('vi-VN') + 'đ';
-}
+import { formatPrice } from '@/lib/utils';
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -54,11 +51,7 @@ export function ProductDetailDrawer({ product: p, open, onOpenChange, onEdit }: 
             <div className="flex items-center justify-between pb-3">
               <span className="text-sm text-muted-foreground">{p.categoryName}</span>
               <Badge variant={STATUS_VARIANT[p.status]}>
-                {p.status === 'active'
-                  ? 'Còn hàng'
-                  : p.status === 'low_stock'
-                    ? 'Sắp hết'
-                    : 'Hết hàng'}
+                {p.status === 'active' ? t('statusActive') : t('statusOutOfStock')}
               </Badge>
             </div>
             <Separator />
@@ -66,16 +59,13 @@ export function ProductDetailDrawer({ product: p, open, onOpenChange, onEdit }: 
               <div className="rounded-2xl bg-muted px-8 py-3 text-center">
                 <p className="text-xs text-muted-foreground mb-1">{t('columns.stock')}</p>
                 <p className="text-3xl font-bold tabular-nums">{p.stockQty}</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Tái đặt hàng khi &lt; {p.reorderLevel}
-                </p>
               </div>
             </div>
             <Separator />
             <div className="divide-y divide-border/60">
               <Row label={t('form.costPrice')}>{formatPrice(p.costPrice)}</Row>
               <Row label={t('form.retailPrice')}>{formatPrice(p.price)}</Row>
-              {p.providerName && <Row label="Nhà cung cấp">{p.providerName}</Row>}
+              {p.providerName && <Row label={t('providerLabel')}>{p.providerName}</Row>}
               {p.shortDescription && (
                 <div className="py-3 space-y-1">
                   <p className="text-sm text-muted-foreground">{t('form.description')}</p>
@@ -83,6 +73,30 @@ export function ProductDetailDrawer({ product: p, open, onOpenChange, onEdit }: 
                 </div>
               )}
             </div>
+
+            {p.variants && p.variants.length > 0 && (
+              <div className="pt-3 pb-2">
+                <Separator className="mb-3" />
+                <p className="text-sm font-semibold mb-2">{t('variantsTitle')}</p>
+                <div className="space-y-2">
+                  {p.variants.map((v) => (
+                    <div key={v.id} className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{v.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatPrice(v.effectiveCostPrice)} / {formatPrice(v.effectivePrice)}
+                          {v.effectiveUnit ? ` · ${v.effectiveUnit}` : ''}
+                        </p>
+                      </div>
+                      <div className="text-right ml-3 shrink-0">
+                        <p className="text-xs text-muted-foreground">{t('variantStock')}</p>
+                        <p className="text-sm font-semibold tabular-nums">{v.stockQty}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
         <DrawerFooter className="flex-row gap-2">
