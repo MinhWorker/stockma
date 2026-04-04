@@ -4,8 +4,6 @@ import { routing } from './i18n/routing';
 
 const intlMiddleware = createIntlMiddleware(routing);
 
-// Better Auth sets __Secure- prefix only on HTTPS. On localhost (even in
-// production build mode), the browser stores the plain cookie name.
 const SESSION_COOKIES = [
   '__Secure-better-auth.session_token',
   'better-auth.session_token',
@@ -21,7 +19,6 @@ function isPublicPath(pathname: string): boolean {
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Always allow internals, API, and static files
   if (
     pathname.startsWith('/api') ||
     pathname.startsWith('/_next') ||
@@ -33,15 +30,11 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Run intl middleware first
   const intlResponse = intlMiddleware(request);
 
   if (isPublicPath(pathname)) return intlResponse;
 
-  // Check session cookie — no HTTP round-trip needed
   const hasSession = SESSION_COOKIES.some((name) => request.cookies.has(name));
-
-  console.log(`[proxy] ${pathname} | session=${hasSession}`);
 
   if (!hasSession) {
     const segments = pathname.split('/');
@@ -50,7 +43,6 @@ export function proxy(request: NextRequest) {
       : routing.defaultLocale;
     const loginUrl = new URL(`/${locale}/login`, request.nextUrl.origin);
     loginUrl.searchParams.set('callbackUrl', pathname);
-    console.log(`[proxy] no session → redirect to ${loginUrl.pathname}`);
     return NextResponse.redirect(loginUrl);
   }
 

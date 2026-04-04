@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useMemo, useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n/routing';
 import { Search, X, Truck } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';

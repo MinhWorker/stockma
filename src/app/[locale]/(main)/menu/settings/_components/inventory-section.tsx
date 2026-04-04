@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n/routing';
 import { Plus, Pencil, Trash2, Warehouse } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
@@ -49,7 +49,7 @@ export function InventorySection({ initialInventories }: Props) {
     } finally {
       setDeletingId(null);
     }
-  }, [t, router]);
+  }, [t, tCommon, router]);
 
   return (
     <>

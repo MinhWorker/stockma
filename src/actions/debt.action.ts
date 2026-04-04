@@ -38,8 +38,7 @@ export async function addPaymentAction(
 }
 
 export async function closeDebtAction(
-  debtGroupId: number,
-  userId: string
+  debtGroupId: number
 ): Promise<ActionResult<import('@/services/types').DebtGroupSummary>> {
   try {
     const result = await closeDebt(debtGroupId);

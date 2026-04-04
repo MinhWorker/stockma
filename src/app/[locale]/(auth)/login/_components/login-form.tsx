@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useLocale, useTranslations } from 'next-intl';
+import { useRouter } from '@/i18n/routing';
+import { useSearchParams } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { Eye, EyeOff } from 'lucide-react';
 import { signIn } from '@/lib/auth-client';
@@ -13,9 +14,8 @@ import { Label } from '@/components/ui/label';
 export function LoginForm() {
   const t = useTranslations('auth');
   const router = useRouter();
-  const locale = useLocale();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl') ?? `/${locale}`;
+  const callbackUrl = searchParams.get('callbackUrl') ?? '/menu';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

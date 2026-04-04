@@ -449,6 +449,7 @@
   },
   "menu": {
     "title": "Xin chào",
+    "heroGreeting": "Chào mừng trở lại",
     "subtitle": "Chọn thao tác bạn muốn thực hiện",
     "backPressToExit": "Nhấn lại để thoát ứng dụng",
     "groups": {

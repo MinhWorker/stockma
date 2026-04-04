@@ -111,7 +111,7 @@ export function StockInClient() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [productId, quantity, note, variantId, purchasePrice, session, t, tCommon]);
+  }, [productId, quantity, note, variantId, purchasePrice, hasVariants, session, t, tCommon]);
 
   function handleReset() {
     setProductId(0);

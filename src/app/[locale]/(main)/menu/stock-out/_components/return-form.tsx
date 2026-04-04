@@ -18,13 +18,11 @@ import {
 } from '@/components/ui/combobox';
 import { getProductsAction } from '@/actions/products.action';
 import { createReturnAction } from '@/actions/return.action';
-import { useSession } from '@/lib/auth-client';
 import { getErrorKey } from '@/lib/error-message';
 import type { ProductSummary } from '@/services/types';
 
 export function ReturnForm() {
   const tCommon = useTranslations('common');
-  const { data: session } = useSession();
 
   const returnQtyId = useId();
   const replacementQtyId = useId();
@@ -112,7 +110,7 @@ export function ReturnForm() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [productId, variantId, returnQty, replacementQty, purchasePrice, note, session, tCommon]);
+  }, [productId, variantId, returnQty, replacementQty, purchasePrice, note, tCommon]);
 
   function handleReset() {
     setProductId(0);

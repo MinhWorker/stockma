@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
 import { notFound } from 'next/navigation';
+import { cookies } from 'next/headers';
 import { routing } from '@/i18n/routing';
 import '../globals.css';
 import { cn } from '@/lib/utils';
@@ -32,8 +33,12 @@ export default async function RootLayout({
 
   const messages = await getMessages();
 
+  const cookieStore = await cookies();
+  const themeCookie = cookieStore.get('theme')?.value;
+  const themeClass = themeCookie === 'dark' ? 'dark' : '';
+
   return (
-    <html lang={locale} suppressHydrationWarning>
+    <html lang={locale} className={themeClass} suppressHydrationWarning>
       <body className={cn('min-h-screen bg-background font-sans antialiased', inter.variable)}>
         <NextIntlClientProvider messages={messages}>
           <RootLayoutClient>{children}</RootLayoutClient>

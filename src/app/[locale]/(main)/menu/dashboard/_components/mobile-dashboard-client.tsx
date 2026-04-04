@@ -1,6 +1,6 @@
 'use client';
 
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter, usePathname } from '@/i18n/routing';
 import { useTranslations } from 'next-intl';
 import { Package, TrendingUp, TrendingDown, CreditCard, Warehouse, ArrowLeftRight } from 'lucide-react';
 import { MobileTransactionCard } from '../../inventory/_components/mobile-transaction-card';

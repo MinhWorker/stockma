@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useLocale, useTranslations } from 'next-intl';
+import { useRouter } from '@/i18n/routing';
+import { useTranslations } from 'next-intl';
 import { BarChart3, TrendingUp, Package, Truck, CreditCard, Warehouse, ChevronRight } from 'lucide-react';
 import type { InventorySummary } from '@/services/types';
 import { formatPrice } from '@/lib/utils';
+import { useQueryParams } from '@/hooks/use-query-params';
 
 interface Props {
   inventories: InventorySummary[];
@@ -14,7 +15,7 @@ interface Props {
 
 export function ReportsHub({ inventories, initialInventoryId }: Props) {
   const router = useRouter();
-  const locale = useLocale();
+  const { set, remove, searchParams } = useQueryParams();
   const t = useTranslations('reports');
   const [selectedInventoryId, setSelectedInventoryId] = useState<number | 'all'>(initialInventoryId ?? 'all');
 
@@ -27,18 +28,31 @@ export function ReportsHub({ inventories, initialInventoryId }: Props) {
   ] as const;
 
   function navigate(reportId: string) {
-    const base = `/${locale}/menu/reports/${selectedInventoryId}/${reportId}`;
+    const from = searchParams.get('from');
+    const to = searchParams.get('to');
+
+    // Build back URL preserving inv + date params
     const backParams = new URLSearchParams();
     if (selectedInventoryId !== 'all') backParams.set('inv', String(selectedInventoryId));
+    if (from) backParams.set('from', from);
+    if (to) backParams.set('to', to);
     const backUrl = `/menu/reports${backParams.size > 0 ? `?${backParams.toString()}` : ''}`;
-    router.push(`${base}?back=${encodeURIComponent(backUrl)}`);
+
+    // Build sub-page URL with date params pre-filled
+    const subParams = new URLSearchParams();
+    subParams.set('back', backUrl);
+    if (from) subParams.set('from', from);
+    if (to) subParams.set('to', to);
+
+    router.push(
+      `/menu/reports/${selectedInventoryId}/${reportId}?${subParams.toString()}` as Parameters<typeof router.push>[0]
+    );
   }
 
   function selectInventory(id: number | 'all') {
     setSelectedInventoryId(id);
-    const params = new URLSearchParams();
-    if (id !== 'all') params.set('inv', String(id));
-    router.replace(`/${locale}/menu/reports?${params.toString()}`);
+    if (id === 'all') remove('inv');
+    else set('inv', String(id));
   }
 
   const selectedInv = selectedInventoryId !== 'all' ? inventories.find((i) => i.id === selectedInventoryId) : null;

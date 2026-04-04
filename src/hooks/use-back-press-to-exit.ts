@@ -1,34 +1,40 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { toast } from 'sonner';
 
-export function useBackPressToExit(message = 'Press again to close app') {
-  const pressedOnce = useRef(false);
+const TOAST_ID = 'back-press-exit';
+const WINDOW_MS = 2000;
 
+export function useBackPressToExit(message = 'Press again to close app') {
   useEffect(() => {
-    // Push a dummy history entry so the back button has something to pop
     window.history.pushState({ backPressGuard: true }, '');
 
+    let pressedOnce = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
     const onPopState = () => {
-      if (pressedOnce.current) {
-        window.close();
+      if (pressedOnce) {
+        toast.dismiss(TOAST_ID);
+        if (timer) clearTimeout(timer);
+        window.history.go(-(window.history.length));
         return;
       }
 
-      pressedOnce.current = true;
-      // Re-push so the back button is interceptable again
+      pressedOnce = true;
       window.history.pushState({ backPressGuard: true }, '');
-      toast(message);
+      toast(message, { id: TOAST_ID, duration: WINDOW_MS });
 
-      setTimeout(() => {
-        pressedOnce.current = false;
-      }, 2000);
+      timer = setTimeout(() => {
+        pressedOnce = false;
+        toast.dismiss(TOAST_ID);
+      }, WINDOW_MS);
     };
 
     window.addEventListener('popstate', onPopState);
     return () => {
       window.removeEventListener('popstate', onPopState);
+      if (timer) clearTimeout(timer);
     };
   }, [message]);
 }

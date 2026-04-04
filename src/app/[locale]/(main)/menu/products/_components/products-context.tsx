@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, use, useCallback, useMemo, useState, type ReactNode } from 'react';
+import { createContext, use, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useDebouncedUrlParam } from '@/hooks/use-debounced-url-param';
 import { useRouter, usePathname } from '@/i18n/routing';
@@ -57,8 +57,15 @@ export function ProductsProvider({ children, openAddForm }: Props) {
 
   const [selectedProduct, setSelectedProduct] = useState<ProductSummary | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
-  const [formOpen, setFormOpen] = useState(() => !!openAddForm);
+  const [formOpen, setFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ProductSummary | undefined>();
+
+  // Delay opening the add form until after the page transition animation completes
+  useEffect(() => {
+    if (!openAddForm) return;
+    const id = setTimeout(() => setFormOpen(true), 420);
+    return () => clearTimeout(id);
+  }, [openAddForm]);
 
   const setStatusFilter = useCallback(
     (v: string) => {

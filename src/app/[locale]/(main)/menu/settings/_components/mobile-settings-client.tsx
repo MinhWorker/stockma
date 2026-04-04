@@ -2,15 +2,13 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { useRouter } from 'next/navigation';
-import { useLocale } from 'next-intl';
+import { useRouter } from '@/i18n/routing';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { SettingsSection } from './settings-section';
 import { SettingsRow } from './settings-row';
 import {
   subscribeAction,
-  unsubscribeAction,
   updateNotificationPrefsByUserAction,
 } from '@/actions/notification.action';
 import { useSession, signOut } from '@/lib/auth-client';
@@ -41,7 +39,6 @@ export function MobileSettingsClient({ initialPrefs }: Props) {
   const tCommon = useTranslations('common');
   const tAuth = useTranslations('auth');
   const router = useRouter();
-  const locale = useLocale();
 
   const { data: session } = useSession();
   const userId = session?.user?.id;
@@ -51,7 +48,6 @@ export function MobileSettingsClient({ initialPrefs }: Props) {
   const [stockOut, setStockOut] = useState(initialPrefs?.stockOut ?? true);
   const [newTransaction, setNewTransaction] = useState(initialPrefs?.newTransaction ?? false);
   const [isSubscribed, setIsSubscribed] = useState(false);
-  const [subscription, setSubscription] = useState<PushSubscription | null>(null);
   const [swSupported, setSwSupported] = useState(false);
 
   useEffect(() => {
@@ -60,7 +56,6 @@ export function MobileSettingsClient({ initialPrefs }: Props) {
     navigator.serviceWorker.register('/sw.js').then(async (reg) => {
       const existing = await reg.pushManager.getSubscription();
       if (existing) {
-        setSubscription(existing);
         setIsSubscribed(true);
       }
     });
@@ -69,11 +64,11 @@ export function MobileSettingsClient({ initialPrefs }: Props) {
   const handleSignOut = useCallback(async () => {
     try {
       await signOut();
-      router.push(`/${locale}/login`);
+      router.push('/login');
     } catch {
       toast.error(tCommon('error'));
     }
-  }, [router, locale, tCommon]);
+  }, [router, tCommon]);
 
   const handleSubscribe = useCallback(async () => {
     const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
@@ -101,7 +96,6 @@ export function MobileSettingsClient({ initialPrefs }: Props) {
         { lowStock, stockOut, newTransaction }
       );
       if (result.success) {
-        setSubscription(sub);
         setIsSubscribed(true);
         toast.success(t('notifications.subscribed'));
       } else {

@@ -1,8 +1,10 @@
 import { getTranslations } from 'next-intl/server';
+import { Suspense } from 'react';
 import { ACTION_GROUPS } from './_config/quick-actions';
 import { ActionGroup } from './_components/action-group';
 import { BackPressGuard } from './_components/back-press-guard';
 import { PageTransition } from '@/components/page-transition';
+import { HeroSection } from './_components/hero-section';
 
 export default async function MenuPage() {
   const t = await getTranslations('menu');
@@ -42,11 +44,9 @@ export default async function MenuPage() {
     <PageTransition>
       <div className="space-y-6 px-4 py-4">
         <BackPressGuard message={t('backPressToExit')} />
-        <div className="space-y-0.5">
-          <h1 className="text-xl font-semibold">{t('title')}</h1>
-          <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
-        </div>
-
+        <Suspense fallback={<HeroSkeleton />}>
+          <HeroSection />
+        </Suspense>
         {ACTION_GROUPS.map((group) => (
           <ActionGroup
             key={group.groupKey}
@@ -57,5 +57,18 @@ export default async function MenuPage() {
         ))}
       </div>
     </PageTransition>
+  );
+}
+
+function HeroSkeleton() {
+  return (
+    <div className="flex items-center justify-between rounded-2xl bg-muted/40 border border-border/60 px-4 py-3.5">
+      <div className="space-y-2 flex-1">
+        <div className="h-2.5 w-16 rounded animate-shimmer" />
+        <div className="h-4 w-28 rounded animate-shimmer" />
+        <div className="h-2.5 w-36 rounded animate-shimmer" />
+      </div>
+      <div className="h-16 w-16 rounded-full animate-shimmer shrink-0 ml-4" />
+    </div>
   );
 }

@@ -37,6 +37,7 @@ interface Props {
 
 export function MobileTransactionList({ transactions, emptyTitle, emptyDesc, onSelect }: Props) {
   const t = useTranslations('inventory.dateGroups');
+  const groups = useGroupByDate(transactions, t);
 
   if (transactions.length === 0) {
     return (
@@ -51,8 +52,6 @@ export function MobileTransactionList({ transactions, emptyTitle, emptyDesc, onS
       </div>
     );
   }
-
-  const groups = useGroupByDate(transactions, t);
 
   return (
     <div className="divide-y divide-border">

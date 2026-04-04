@@ -61,7 +61,7 @@ export function DebtList() {
   // Close debt loading
   const [closingId, setClosingId] = useState<number | null>(null);
 
-  async function loadDebts() {
+  const loadDebts = useCallback(async () => {
     setLoading(true);
     try {
       const result = await getDebtGroupsAction(
@@ -71,12 +71,11 @@ export function DebtList() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [statusFilter]);
 
   useEffect(() => {
     loadDebts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter]);
+  }, [loadDebts]);
 
   function openPaymentDialog(debtId: number) {
     setPaymentDebtId(debtId);
@@ -119,12 +118,12 @@ export function DebtList() {
     } finally {
       setPaymentSubmitting(false);
     }
-  }, [paymentDebtId, paymentAmount, paymentNote, userId, tCommon]);
+  }, [paymentDebtId, paymentAmount, paymentNote, userId, tCommon, loadDebts]);
 
   const handleCloseDebt = useCallback(async (debtId: number) => {
     setClosingId(debtId);
     try {
-      const result = await closeDebtAction(debtId, userId);
+      const result = await closeDebtAction(debtId);
       if (!result.success) {
         toast.error(tCommon(getErrorKey(result.error)));
         return;
@@ -136,7 +135,7 @@ export function DebtList() {
     } finally {
       setClosingId(null);
     }
-  }, [userId, tCommon]);
+  }, [tCommon, loadDebts]);
 
   return (
     <div className="space-y-4 px-4 py-4">

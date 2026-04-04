@@ -46,7 +46,7 @@ export async function createTransactionAction(
   payload: CreateTransactionPayload
 ): Promise<ActionResult> {
   try {
-    const tx = await createTransaction({
+    await createTransaction({
       type: payload.type,
       productId: payload.productId,
       quantity:
@@ -55,7 +55,6 @@ export async function createTransactionAction(
       userId: payload.userId,
       variantId: payload.variantId,
       purchasePrice: payload.purchasePrice,
-      // stock_out via this action defaults to transfer (no salePrice needed)
       stockOutType: payload.type === 'stock_out' ? 'transfer' : undefined,
     });
 

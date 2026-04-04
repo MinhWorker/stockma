@@ -449,6 +449,7 @@
   },
   "menu": {
     "title": "Hello",
+    "heroGreeting": "Welcome back",
     "subtitle": "What would you like to do?",
     "backPressToExit": "Press again to close app",
     "groups": {

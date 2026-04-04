@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n/routing';
 import { toast } from 'sonner';
 import { Loader2, Trash2 } from 'lucide-react';
 import {
