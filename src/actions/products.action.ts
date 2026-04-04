@@ -1,29 +1,15 @@
 'use server';
 
 import { revalidateTag } from 'next/cache';
-import {
-  createProduct,
-  updateProduct,
-  deleteProduct,
-  getAllProducts,
-} from '@/services/product.service';
-import {
-  createVariant,
-  updateVariant,
-  deleteVariant,
-} from '@/services/variant.service';
-import { logActivity } from '@/services/activity.service';
+import { createProduct, updateProduct, deleteProduct, getAllProducts } from '@/services/product.service';
+import { createVariant, updateVariant, deleteVariant } from '@/services/variant.service';
+import { logActivity, ACTIVITY_CACHE_TAG } from '@/services/activity.service';
 import { PRODUCT_CACHE_TAG } from '@/services/product.service';
-import { ACTIVITY_CACHE_TAG } from '@/services/activity.service';
 import { getAllCategories } from '@/services/category.service';
 import { getAllProviders } from '@/services/provider.service';
 import { getAllInventories } from '@/services/inventory.service';
-import type {
-  CreateProductInput,
-  UpdateProductInput,
-  CreateVariantInput,
-  UpdateVariantInput,
-} from '@/services/types';
+import { withUser } from '@/lib/action';
+import type { CreateProductInput, UpdateProductInput, CreateVariantInput, UpdateVariantInput } from '@/services/types';
 
 export interface ActionResult<T = void> {
   success: boolean;
@@ -44,10 +30,7 @@ export async function getProductsAction() {
   return getAllProducts();
 }
 
-export async function createProductAction(
-  input: CreateProductInput,
-  userId: string
-): Promise<ActionResult> {
+export const createProductAction = withUser(async (user, input: CreateProductInput): Promise<ActionResult> => {
   try {
     const product = await createProduct(input);
     await logActivity({
@@ -57,7 +40,7 @@ export async function createProductAction(
       entityName: product.name,
       description: `Tạo sản phẩm "${product.name}"`,
       inventoryId: product.inventoryId,
-      userId,
+      userId: user.id,
     });
     revalidateTag(PRODUCT_CACHE_TAG, 'default');
     revalidateTag(ACTIVITY_CACHE_TAG, 'default');
@@ -65,13 +48,9 @@ export async function createProductAction(
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
   }
-}
+});
 
-export async function updateProductAction(
-  id: number,
-  input: UpdateProductInput,
-  userId: string
-): Promise<ActionResult> {
+export const updateProductAction = withUser(async (user, id: number, input: UpdateProductInput): Promise<ActionResult> => {
   try {
     const product = await updateProduct(id, input);
     await logActivity({
@@ -81,7 +60,7 @@ export async function updateProductAction(
       entityName: product.name,
       description: `Cập nhật sản phẩm "${product.name}"`,
       inventoryId: product.inventoryId,
-      userId,
+      userId: user.id,
     });
     revalidateTag(PRODUCT_CACHE_TAG, 'default');
     revalidateTag(ACTIVITY_CACHE_TAG, 'default');
@@ -89,11 +68,10 @@ export async function updateProductAction(
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
   }
-}
+});
 
-export async function deleteProductAction(id: number, userId: string): Promise<ActionResult> {
+export const deleteProductAction = withUser(async (user, id: number): Promise<ActionResult> => {
   try {
-    // Fetch name before deletion for the log
     const products = await getAllProducts();
     const product = products.find((p) => p.id === id);
     await deleteProduct(id);
@@ -104,7 +82,7 @@ export async function deleteProductAction(id: number, userId: string): Promise<A
       entityName: product?.name,
       description: `Xóa sản phẩm "${product?.name ?? id}"`,
       inventoryId: product?.inventoryId,
-      userId,
+      userId: user.id,
     });
     revalidateTag(PRODUCT_CACHE_TAG, 'default');
     revalidateTag(ACTIVITY_CACHE_TAG, 'default');
@@ -112,16 +90,16 @@ export async function deleteProductAction(id: number, userId: string): Promise<A
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
   }
-}
+});
 
 // ---------------------------------------------------------------------------
 // Variant actions
 // ---------------------------------------------------------------------------
 
-export async function createVariantAction(
-  input: CreateVariantInput,
-  userId: string
-): Promise<ActionResult<import('@/services/types').VariantSummary>> {
+export const createVariantAction = withUser(async (
+  user,
+  input: CreateVariantInput
+): Promise<ActionResult<import('@/services/types').VariantSummary>> => {
   try {
     const variant = await createVariant(input);
     await logActivity({
@@ -130,7 +108,7 @@ export async function createVariantAction(
       entityId: variant.id,
       entityName: variant.name,
       description: `Tạo phân loại "${variant.name}" cho sản phẩm #${input.productId}`,
-      userId,
+      userId: user.id,
     });
     revalidateTag(PRODUCT_CACHE_TAG, 'default');
     revalidateTag(ACTIVITY_CACHE_TAG, 'default');
@@ -138,13 +116,13 @@ export async function createVariantAction(
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
   }
-}
+});
 
-export async function updateVariantAction(
+export const updateVariantAction = withUser(async (
+  user,
   id: number,
-  input: UpdateVariantInput,
-  userId: string
-): Promise<ActionResult<import('@/services/types').VariantSummary>> {
+  input: UpdateVariantInput
+): Promise<ActionResult<import('@/services/types').VariantSummary>> => {
   try {
     const variant = await updateVariant(id, input);
     await logActivity({
@@ -153,7 +131,7 @@ export async function updateVariantAction(
       entityId: variant.id,
       entityName: variant.name,
       description: `Cập nhật phân loại "${variant.name}"`,
-      userId,
+      userId: user.id,
     });
     revalidateTag(PRODUCT_CACHE_TAG, 'default');
     revalidateTag(ACTIVITY_CACHE_TAG, 'default');
@@ -161,9 +139,9 @@ export async function updateVariantAction(
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
   }
-}
+});
 
-export async function deleteVariantAction(id: number, userId: string): Promise<ActionResult> {
+export const deleteVariantAction = withUser(async (user, id: number): Promise<ActionResult> => {
   try {
     await deleteVariant(id);
     await logActivity({
@@ -171,7 +149,7 @@ export async function deleteVariantAction(id: number, userId: string): Promise<A
       entityType: 'ProductVariant',
       entityId: id,
       description: `Xóa phân loại #${id}`,
-      userId,
+      userId: user.id,
     });
     revalidateTag(PRODUCT_CACHE_TAG, 'default');
     revalidateTag(ACTIVITY_CACHE_TAG, 'default');
@@ -179,5 +157,4 @@ export async function deleteVariantAction(id: number, userId: string): Promise<A
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
   }
-}
-
+});

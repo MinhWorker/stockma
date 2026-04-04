@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname } from '@/i18n/routing';
-import { Link } from '@/i18n/routing';
+import { LocaleLink } from '@/components/locale-link';
 import { cn } from '@/lib/utils';
 import type { QuickAction } from '../_config/quick-actions';
 import {
@@ -50,15 +50,14 @@ export function ActionCard({ action, label, description }: ActionCardProps) {
   const Icon = ICON_BY_ID[action.id] ?? HelpCircle;
   const pathname = usePathname();
 
-  // Build href with back param so destination pages can navigate back to menu
   const params = new URLSearchParams({ back: pathname });
-  // For actions that also carry an intent (e.g. stock-in opens inventory with type preset)
   if (action.intent) params.set('action', action.intent);
   const href = `${action.href}?${params.toString()}`;
 
   return (
-    <Link
-      href={href as Parameters<typeof Link>[0]['href']}
+    <LocaleLink
+      href={href}
+      transitionTypes={['nav-forward']}
       className={cn(
         'group flex flex-col items-center gap-2 rounded-2xl p-4',
         'bg-card border border-border',
@@ -76,6 +75,6 @@ export function ActionCard({ action, label, description }: ActionCardProps) {
           {description}
         </p>
       </div>
-    </Link>
+    </LocaleLink>
   );
 }

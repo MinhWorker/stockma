@@ -17,7 +17,7 @@ export function BottomNav() {
   const t = useTranslations('nav');
 
   return (
-    <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-40 border-t border-border bg-background/90 backdrop-blur-sm">
+    <nav style={{ viewTransitionName: 'bottom-nav' }} className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-40 border-t border-border bg-background/90 backdrop-blur-sm">
       <div className="flex items-center justify-around px-2 py-2">
         {NAV_ITEMS.map(({ href, icon: Icon, labelKey }) => {
           const isActive = pathname === href || (href !== '/menu' && pathname.startsWith(href));

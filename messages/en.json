@@ -450,6 +450,7 @@
   "menu": {
     "title": "Hello",
     "subtitle": "What would you like to do?",
+    "backPressToExit": "Press again to close app",
     "groups": {
       "warehouse": "Warehouse",
       "catalog": "Catalog",

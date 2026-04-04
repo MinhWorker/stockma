@@ -20,12 +20,13 @@ export function MainHeader() {
   const backTo = searchParams.get('back');
 
   function handleBack() {
-    if (backTo) router.push(backTo as Parameters<typeof router.push>[0]);
-    else router.push(MENU_ROOT);
+    const opts = { transitionTypes: ['nav-back'] };
+    if (backTo) router.push(backTo as Parameters<typeof router.push>[0], opts);
+    else router.push(MENU_ROOT, opts);
   }
 
   return (
-    <header className="sticky top-0 z-40 flex items-center justify-between px-4 py-3 bg-background/80 backdrop-blur-sm border-b border-border min-h-[56px]">
+    <header style={{ viewTransitionName: 'site-header' }} className="sticky top-0 z-40 flex items-center justify-between px-4 py-3 bg-background/80 backdrop-blur-sm border-b border-border min-h-[56px]">
       {/* Left: back button or logo */}
       {isRoot ? (
         <div className="flex items-center gap-2">

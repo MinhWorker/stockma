@@ -1,7 +1,9 @@
 'use server';
 
 import { revalidateTag } from 'next/cache';
-import { createInventory, updateInventory, deleteInventory } from '@/services/inventory.service';
+import { createInventory, updateInventory, deleteInventory, getInventoryById } from '@/services/inventory.service';
+import { logActivity, ACTIVITY_CACHE_TAG } from '@/services/activity.service';
+import { withUser } from '@/lib/action';
 
 const INVENTORY_TAG = 'inventories';
 
@@ -11,33 +13,61 @@ export interface ActionResult<T = void> {
   error?: string;
 }
 
-export async function createInventoryAction(data: { name: string; description?: string }): Promise<ActionResult> {
+export const createInventoryAction = withUser(async (user, data: { name: string; description?: string }): Promise<ActionResult> => {
   try {
-    await createInventory(data);
-    revalidateTag(INVENTORY_TAG, "default");
-    revalidateTag('products', "default");
+    const inventory = await createInventory(data);
+    await logActivity({
+      action: 'create',
+      entityType: 'Inventory',
+      entityId: inventory.id,
+      entityName: inventory.name,
+      description: `Tạo kho "${inventory.name}"`,
+      userId: user.id,
+    });
+    revalidateTag(INVENTORY_TAG, 'default');
+    revalidateTag('products', 'default');
+    revalidateTag(ACTIVITY_CACHE_TAG, 'default');
     return { success: true };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
   }
-}
+});
 
-export async function updateInventoryAction(id: number, data: { name?: string; description?: string }): Promise<ActionResult> {
+export const updateInventoryAction = withUser(async (user, id: number, data: { name?: string; description?: string }): Promise<ActionResult> => {
   try {
-    await updateInventory(id, data);
-    revalidateTag(INVENTORY_TAG, "default");
+    const inventory = await updateInventory(id, data);
+    await logActivity({
+      action: 'update',
+      entityType: 'Inventory',
+      entityId: inventory.id,
+      entityName: inventory.name,
+      description: `Cập nhật kho "${inventory.name}"`,
+      userId: user.id,
+    });
+    revalidateTag(INVENTORY_TAG, 'default');
+    revalidateTag(ACTIVITY_CACHE_TAG, 'default');
     return { success: true };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
   }
-}
+});
 
-export async function deleteInventoryAction(id: number): Promise<ActionResult> {
+export const deleteInventoryAction = withUser(async (user, id: number): Promise<ActionResult> => {
   try {
+    const inventory = await getInventoryById(id);
     await deleteInventory(id);
-    revalidateTag(INVENTORY_TAG, "default");
+    await logActivity({
+      action: 'delete',
+      entityType: 'Inventory',
+      entityId: id,
+      entityName: inventory?.name,
+      description: `Xóa kho "${inventory?.name ?? id}"`,
+      userId: user.id,
+    });
+    revalidateTag(INVENTORY_TAG, 'default');
+    revalidateTag(ACTIVITY_CACHE_TAG, 'default');
     return { success: true };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
   }
-}
+});

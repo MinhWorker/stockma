@@ -100,7 +100,6 @@ export function ReturnForm() {
         replacementQty: repQty,
         purchasePrice: purchasePrice ? Number(purchasePrice) : undefined,
         note: note || undefined,
-        userId: session?.user?.id ?? '',
       });
       if (!result.success) {
         toast.error(tCommon(getErrorKey(result.error)));

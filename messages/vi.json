@@ -450,6 +450,7 @@
   "menu": {
     "title": "Xin chào",
     "subtitle": "Chọn thao tác bạn muốn thực hiện",
+    "backPressToExit": "Nhấn lại để thoát ứng dụng",
     "groups": {
       "warehouse": "Kho hàng",
       "catalog": "Danh mục",

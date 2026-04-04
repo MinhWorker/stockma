@@ -138,3 +138,88 @@
 .animate-shimmer {
   @apply bg-muted animate-pulse;
 }
+
+/* ── View Transitions ─────────────────────────────────────────────────────── */
+
+/* Anchor the header so it never slides during page transitions */
+::view-transition-group(site-header) {
+  animation: none;
+  z-index: 100;
+}
+::view-transition-old(site-header) {
+  display: none;
+}
+::view-transition-new(site-header) {
+  animation: none;
+}
+
+::view-transition-group(bottom-nav) {
+  animation: none;
+  z-index: 100;
+}
+::view-transition-old(bottom-nav) {
+  display: none;
+}
+::view-transition-new(bottom-nav) {
+  animation: none;
+}
+
+/* Contain page slides within the scrollable area — prevents overlap with header/nav */
+::view-transition-group(main-content) {
+  animation: none;
+  overflow: hidden;
+}
+::view-transition-old(main-content) {
+  display: none;
+}
+::view-transition-new(main-content) {
+  animation: none;
+}
+
+/* Directional slide keyframes */
+@keyframes vt-fade {
+  from { opacity: 0; filter: blur(2px); }
+  to   { opacity: 1; filter: blur(0);   }
+}
+@keyframes vt-slide {
+  from { translate: var(--vt-slide-offset); }
+  to   { translate: 0; }
+}
+
+/* Forward: old exits left, new enters from right */
+::view-transition-old(.nav-forward) {
+  --vt-slide-offset: -50px;
+  animation:
+    150ms ease-in both vt-fade reverse,
+    400ms ease-in-out both vt-slide reverse;
+}
+::view-transition-new(.nav-forward) {
+  --vt-slide-offset: 50px;
+  animation:
+    210ms ease-out 150ms both vt-fade,
+    400ms ease-in-out both vt-slide;
+}
+
+/* Back: old exits right, new enters from left */
+::view-transition-old(.nav-back) {
+  --vt-slide-offset: 50px;
+  animation:
+    150ms ease-in both vt-fade reverse,
+    400ms ease-in-out both vt-slide reverse;
+}
+::view-transition-new(.nav-back) {
+  --vt-slide-offset: -50px;
+  animation:
+    210ms ease-out 150ms both vt-fade,
+    400ms ease-in-out both vt-slide;
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+}

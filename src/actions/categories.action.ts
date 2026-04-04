@@ -1,12 +1,9 @@
 'use server';
 
 import { revalidateTag } from 'next/cache';
-import {
-  getAllCategories,
-  createCategory,
-  updateCategory,
-  deleteCategory,
-} from '@/services/category.service';
+import { getAllCategories, createCategory, updateCategory, deleteCategory, getCategoryById } from '@/services/category.service';
+import { logActivity, ACTIVITY_CACHE_TAG } from '@/services/activity.service';
+import { withUser } from '@/lib/action';
 
 const CATEGORY_TAG = 'categories';
 
@@ -20,40 +17,62 @@ export async function getCategoriesAction() {
   return getAllCategories();
 }
 
-export async function createCategoryAction(data: {
-  name: string;
-  state: string;
-}): Promise<ActionResult> {
+export const createCategoryAction = withUser(async (user, data: { name: string; state: string }): Promise<ActionResult> => {
   try {
-    await createCategory(data);
-    revalidateTag(CATEGORY_TAG, "default");
-    revalidateTag('products', "default"); // products list includes categoryName
+    const category = await createCategory(data);
+    await logActivity({
+      action: 'create',
+      entityType: 'Category',
+      entityId: category.id,
+      entityName: category.name,
+      description: `Tạo danh mục "${category.name}"`,
+      userId: user.id,
+    });
+    revalidateTag(CATEGORY_TAG, 'default');
+    revalidateTag('products', 'default');
+    revalidateTag(ACTIVITY_CACHE_TAG, 'default');
     return { success: true };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
   }
-}
+});
 
-export async function updateCategoryAction(
-  id: number,
-  data: { name?: string; state?: string }
-): Promise<ActionResult> {
+export const updateCategoryAction = withUser(async (user, id: number, data: { name?: string; state?: string }): Promise<ActionResult> => {
   try {
-    await updateCategory(id, data);
-    revalidateTag(CATEGORY_TAG, "default");
-    revalidateTag('products', "default");
+    const category = await updateCategory(id, data);
+    await logActivity({
+      action: 'update',
+      entityType: 'Category',
+      entityId: category.id,
+      entityName: category.name,
+      description: `Cập nhật danh mục "${category.name}"`,
+      userId: user.id,
+    });
+    revalidateTag(CATEGORY_TAG, 'default');
+    revalidateTag('products', 'default');
+    revalidateTag(ACTIVITY_CACHE_TAG, 'default');
     return { success: true };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
   }
-}
+});
 
-export async function deleteCategoryAction(id: number): Promise<ActionResult> {
+export const deleteCategoryAction = withUser(async (user, id: number): Promise<ActionResult> => {
   try {
+    const category = await getCategoryById(id);
     await deleteCategory(id);
-    revalidateTag(CATEGORY_TAG, "default");
+    await logActivity({
+      action: 'delete',
+      entityType: 'Category',
+      entityId: id,
+      entityName: category?.name,
+      description: `Xóa danh mục "${category?.name ?? id}"`,
+      userId: user.id,
+    });
+    revalidateTag(CATEGORY_TAG, 'default');
+    revalidateTag(ACTIVITY_CACHE_TAG, 'default');
     return { success: true };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
   }
-}
+});

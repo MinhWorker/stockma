@@ -31,7 +31,6 @@ import {
   updateVariantAction,
   deleteVariantAction,
 } from '@/actions/products.action';
-import { useSession } from '@/lib/auth-client';
 import { getErrorKey } from '@/lib/error-message';
 import type { ProductSummary, CategorySummary, ProviderSummary, InventorySummary, VariantSummary } from '@/services/types';
 
@@ -86,8 +85,6 @@ export function MobileProductFormDrawer({ open, onOpenChange, product, onSuccess
   const tCommon = useTranslations('common');
   const router = useRouter();
   const [, startTransition] = useTransition();
-  const { data: session } = useSession();
-  const userId = session?.user?.id ?? '';
 
   const nameId = useId();
   const costId = useId();
@@ -160,7 +157,7 @@ export function MobileProductFormDrawer({ open, onOpenChange, product, onSuccess
             inventoryId: values.inventoryId,
             shortDescription: values.description,
             unit: values.unit || undefined,
-          }, userId)
+          })
         : await createProductAction({
             name: values.name,
             costPrice: values.costPrice,
@@ -170,7 +167,7 @@ export function MobileProductFormDrawer({ open, onOpenChange, product, onSuccess
             inventoryId: values.inventoryId,
             shortDescription: values.description,
             unit: values.unit || undefined,
-          }, userId);
+          });
       if (!result.success) {
         toast.error(tCommon(getErrorKey(result.error)));
         return;
@@ -213,7 +210,7 @@ export function MobileProductFormDrawer({ open, onOpenChange, product, onSuccess
           costPrice: variantForm.costPrice ? Number(variantForm.costPrice) : undefined,
           price: variantForm.price ? Number(variantForm.price) : undefined,
           unit: variantForm.unit || undefined,
-        }, userId);
+        });
         if (!result.success) {
           toast.error(tCommon(getErrorKey(result.error)));
           return;
@@ -229,7 +226,7 @@ export function MobileProductFormDrawer({ open, onOpenChange, product, onSuccess
           costPrice: variantForm.costPrice ? Number(variantForm.costPrice) : undefined,
           price: variantForm.price ? Number(variantForm.price) : undefined,
           unit: variantForm.unit || undefined,
-        }, userId);
+        });
         if (!result.success) {
           toast.error(tCommon(getErrorKey(result.error)));
           return;
@@ -250,7 +247,7 @@ export function MobileProductFormDrawer({ open, onOpenChange, product, onSuccess
   async function handleDeleteVariant(variantId: number) {
     setVariantSubmitting(true);
     try {
-      const result = await deleteVariantAction(variantId, userId);
+      const result = await deleteVariantAction(variantId);
       if (!result.success) {
         toast.error(tCommon(getErrorKey(result.error)));
         return;

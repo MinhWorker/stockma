@@ -1,7 +1,9 @@
 'use server';
 
 import { revalidateTag } from 'next/cache';
-import { getAllProviders, createProvider, updateProvider, deleteProvider } from '@/services/provider.service';
+import { getAllProviders, createProvider, updateProvider, deleteProvider, getProviderById } from '@/services/provider.service';
+import { logActivity, ACTIVITY_CACHE_TAG } from '@/services/activity.service';
+import { withUser } from '@/lib/action';
 
 const PROVIDER_TAG = 'providers';
 
@@ -15,33 +17,61 @@ export async function getProvidersAction() {
   return getAllProviders();
 }
 
-export async function createProviderAction(data: { name: string }): Promise<ActionResult> {
+export const createProviderAction = withUser(async (user, data: { name: string }): Promise<ActionResult> => {
   try {
-    await createProvider(data);
-    revalidateTag(PROVIDER_TAG, "default");
+    const provider = await createProvider(data);
+    await logActivity({
+      action: 'create',
+      entityType: 'Provider',
+      entityId: provider.id,
+      entityName: provider.name,
+      description: `Tạo nhà cung cấp "${provider.name}"`,
+      userId: user.id,
+    });
+    revalidateTag(PROVIDER_TAG, 'default');
+    revalidateTag(ACTIVITY_CACHE_TAG, 'default');
     return { success: true };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
   }
-}
+});
 
-export async function updateProviderAction(id: number, data: { name: string }): Promise<ActionResult> {
+export const updateProviderAction = withUser(async (user, id: number, data: { name: string }): Promise<ActionResult> => {
   try {
-    await updateProvider(id, data);
-    revalidateTag(PROVIDER_TAG, "default");
-    revalidateTag('products', "default");
+    const provider = await updateProvider(id, data);
+    await logActivity({
+      action: 'update',
+      entityType: 'Provider',
+      entityId: provider.id,
+      entityName: provider.name,
+      description: `Cập nhật nhà cung cấp "${provider.name}"`,
+      userId: user.id,
+    });
+    revalidateTag(PROVIDER_TAG, 'default');
+    revalidateTag('products', 'default');
+    revalidateTag(ACTIVITY_CACHE_TAG, 'default');
     return { success: true };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
   }
-}
+});
 
-export async function deleteProviderAction(id: number): Promise<ActionResult> {
+export const deleteProviderAction = withUser(async (user, id: number): Promise<ActionResult> => {
   try {
+    const provider = await getProviderById(id);
     await deleteProvider(id);
-    revalidateTag(PROVIDER_TAG, "default");
+    await logActivity({
+      action: 'delete',
+      entityType: 'Provider',
+      entityId: id,
+      entityName: provider?.name,
+      description: `Xóa nhà cung cấp "${provider?.name ?? id}"`,
+      userId: user.id,
+    });
+    revalidateTag(PROVIDER_TAG, 'default');
+    revalidateTag(ACTIVITY_CACHE_TAG, 'default');
     return { success: true };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
   }
-}
+});

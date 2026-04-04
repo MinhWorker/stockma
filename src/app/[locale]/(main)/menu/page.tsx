@@ -1,6 +1,8 @@
 import { getTranslations } from 'next-intl/server';
 import { ACTION_GROUPS } from './_config/quick-actions';
 import { ActionGroup } from './_components/action-group';
+import { BackPressGuard } from './_components/back-press-guard';
+import { PageTransition } from '@/components/page-transition';
 
 export default async function MenuPage() {
   const t = await getTranslations('menu');
@@ -37,20 +39,23 @@ export default async function MenuPage() {
   };
 
   return (
-    <div className="space-y-6 px-4 py-4">
-      <div className="space-y-0.5">
-        <h1 className="text-xl font-semibold">{t('title')}</h1>
-        <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
-      </div>
+    <PageTransition>
+      <div className="space-y-6 px-4 py-4">
+        <BackPressGuard message={t('backPressToExit')} />
+        <div className="space-y-0.5">
+          <h1 className="text-xl font-semibold">{t('title')}</h1>
+          <p className="text-sm text-muted-foreground">{t('subtitle')}</p>
+        </div>
 
-      {ACTION_GROUPS.map((group) => (
-        <ActionGroup
-          key={group.groupKey}
-          group={group}
-          groupLabel={groupLabels[group.groupKey] ?? group.groupKey}
-          actionLabels={actionLabels[group.groupKey] ?? {}}
-        />
-      ))}
-    </div>
+        {ACTION_GROUPS.map((group) => (
+          <ActionGroup
+            key={group.groupKey}
+            group={group}
+            groupLabel={groupLabels[group.groupKey] ?? group.groupKey}
+            actionLabels={actionLabels[group.groupKey] ?? {}}
+          />
+        ))}
+      </div>
+    </PageTransition>
   );
 }

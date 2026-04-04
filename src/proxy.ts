@@ -4,10 +4,12 @@ import { routing } from './i18n/routing';
 
 const intlMiddleware = createIntlMiddleware(routing);
 
-// Better Auth uses __Secure- prefix on HTTPS (production), plain name on HTTP (dev)
-const SESSION_COOKIE = process.env.NODE_ENV === 'production'
-  ? '__Secure-better-auth.session_token'
-  : 'better-auth.session_token';
+// Better Auth sets __Secure- prefix only on HTTPS. On localhost (even in
+// production build mode), the browser stores the plain cookie name.
+const SESSION_COOKIES = [
+  '__Secure-better-auth.session_token',
+  'better-auth.session_token',
+];
 
 const PUBLIC_PATHS = ['/login'];
 
@@ -37,7 +39,7 @@ export function proxy(request: NextRequest) {
   if (isPublicPath(pathname)) return intlResponse;
 
   // Check session cookie — no HTTP round-trip needed
-  const hasSession = request.cookies.has(SESSION_COOKIE);
+  const hasSession = SESSION_COOKIES.some((name) => request.cookies.has(name));
 
   console.log(`[proxy] ${pathname} | session=${hasSession}`);
 
