@@ -32,9 +32,18 @@ export function proxy(request: NextRequest) {
 
   const intlResponse = intlMiddleware(request);
 
-  if (isPublicPath(pathname)) return intlResponse;
-
   const hasSession = SESSION_COOKIES.some((name) => request.cookies.has(name));
+
+  if (isPublicPath(pathname)) {
+    if (hasSession) {
+      const segments = pathname.split('/');
+      const locale = routing.locales.includes(segments[1] as 'vi' | 'en')
+        ? segments[1]
+        : routing.defaultLocale;
+      return NextResponse.redirect(new URL(`/${locale}/menu`, request.nextUrl.origin));
+    }
+    return intlResponse;
+  }
 
   if (!hasSession) {
     const segments = pathname.split('/');

@@ -5,8 +5,51 @@ import { Drawer as DrawerPrimitive } from 'vaul';
 
 import { cn } from '@/lib/utils';
 
-function Drawer({ ...props }: React.ComponentProps<typeof DrawerPrimitive.Root>) {
-  return <DrawerPrimitive.Root data-slot="drawer" {...props} />;
+// ---------------------------------------------------------------------------
+// Global drawer stack — tracks close callbacks in open order so the back
+// button always closes the most recently opened drawer only.
+// ---------------------------------------------------------------------------
+const drawerStack: Array<() => void> = [];
+
+function Drawer({ open, onOpenChange, ...props }: React.ComponentProps<typeof DrawerPrimitive.Root>) {
+  const closeRef = React.useRef<(() => void) | null>(null);
+
+  React.useEffect(() => {
+    if (!open) return;
+
+    // Register this drawer's close fn on the stack
+    const close = () => onOpenChange?.(false);
+    closeRef.current = close;
+    drawerStack.push(close);
+
+    // Push a dummy history entry for this drawer
+    window.history.pushState({ drawerOpen: true }, '');
+
+    function handlePopState() {
+      // Only the top of the stack should respond
+      const top = drawerStack[drawerStack.length - 1];
+      if (top === closeRef.current) {
+        drawerStack.pop();
+        closeRef.current = null;
+        top();
+      }
+    }
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      // Drawer closed programmatically (not via back button) — remove from
+      // stack and clean up the dummy history entry we pushed
+      const idx = drawerStack.indexOf(close);
+      if (idx !== -1) {
+        drawerStack.splice(idx, 1);
+        window.history.back();
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  return <DrawerPrimitive.Root data-slot="drawer" open={open} onOpenChange={onOpenChange} {...props} />;
 }
 
 function DrawerTrigger({ ...props }: React.ComponentProps<typeof DrawerPrimitive.Trigger>) {

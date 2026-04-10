@@ -15,7 +15,10 @@ export function LoginForm() {
   const t = useTranslations('auth');
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get('callbackUrl') ?? '/menu';
+  const rawCallback = searchParams.get('callbackUrl') ?? '/menu';
+  // Strip leading locale segment (e.g. /vi/menu → /menu) because
+  // next-intl's router.push() prepends the locale automatically
+  const callbackUrl = rawCallback.replace(/^\/(vi|en)(?=\/|$)/, '') || '/menu';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
