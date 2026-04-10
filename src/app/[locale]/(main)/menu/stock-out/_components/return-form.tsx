@@ -8,6 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { FormField } from '@/components/forms/form-field';
+import { PriceInput } from '@/components/forms/price-input';
+import { ProductCombobox } from '@/components/forms/product-combobox';
 import {
   Combobox,
   ComboboxInput,
@@ -51,14 +53,6 @@ export function ReturnForm() {
   const selectedProduct = products.find((p) => p.id === productId);
   const hasVariants = (selectedProduct?.variants?.length ?? 0) > 0;
   const selectedVariant = selectedProduct?.variants?.find((v) => v.id === variantId);
-
-  const productInputValue = productId && !productSearch
-    ? (selectedProduct?.name ?? '')
-    : productSearch;
-
-  const filteredProducts = productSearch
-    ? products.filter((p) => p.name.toLowerCase().includes(productSearch.toLowerCase()))
-    : products;
 
   const filteredVariants = variantSearch
     ? (selectedProduct?.variants ?? []).filter((v) =>
@@ -141,31 +135,14 @@ export function ReturnForm() {
     <div className="space-y-4 px-4 py-4">
       {/* Product */}
       <FormField label="Sản phẩm" required error={errors.productId}>
-        <Combobox
-          value={productId || null}
-          onValueChange={(v) => handleProductChange(v as number)}
-        >
-          <ComboboxInput
-            placeholder="Tìm sản phẩm..."
-            value={productInputValue}
-            onChange={(e) => {
-              setProductSearch(e.target.value);
-              if (!e.target.value) handleProductChange(0);
-            }}
-            aria-invalid={!!errors.productId}
-          />
-          <ComboboxContent>
-            <ComboboxList>
-              <ComboboxEmpty>{tCommon('noResults')}</ComboboxEmpty>
-              {filteredProducts.map((p) => (
-                <ComboboxItem key={p.id} value={p.id}>
-                  <span className="flex-1 truncate">{p.name}</span>
-                  <span className="ml-2 text-xs text-muted-foreground">{p.categoryName}</span>
-                </ComboboxItem>
-              ))}
-            </ComboboxList>
-          </ComboboxContent>
-        </Combobox>
+        <ProductCombobox
+          products={products}
+          productId={productId}
+          productSearch={productSearch}
+          onProductChange={handleProductChange}
+          onSearchChange={(s) => { setProductSearch(s); if (!s) handleProductChange(0); }}
+          error={!!errors.productId}
+        />
       </FormField>
 
       {/* Variant — only when product has variants */}
@@ -239,12 +216,10 @@ export function ReturnForm() {
 
       {/* Purchase price — optional */}
       <FormField label="Giá nhập hàng đổi" htmlFor={purchasePriceId}>
-        <Input
+        <PriceInput
           id={purchasePriceId}
-          type="number"
-          min={0}
           value={purchasePrice}
-          onChange={(e) => setPurchasePrice(e.target.value)}
+          onChange={(v) => setPurchasePrice(String(v || ''))}
           placeholder="Giá nhập (tùy chọn)"
         />
       </FormField>

@@ -4,6 +4,7 @@ import { createContext, use, useCallback, useMemo, useState, type ReactNode } fr
 import { useSearchParams } from 'next/navigation';
 import { useDebouncedUrlParam } from '@/hooks/use-debounced-url-param';
 import { useRouter, usePathname } from '@/i18n/routing';
+import { normalizeSearchText } from '@/lib/normalize-search';
 import type { TransactionRecord, TransactionType } from '@/services/types';
 
 interface InventoryState {
@@ -39,7 +40,11 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const [inputValue, setInputValue, search] = useDebouncedUrlParam('q');
+  const [inputValue, setInputValue, search] = useDebouncedUrlParam(
+    'q',
+    300,
+    normalizeSearchText
+  );
   const tab = (searchParams.get('tab') ?? 'all') as 'all' | TransactionType;
 
   const [selectedTx, setSelectedTx] = useState<TransactionRecord | null>(null);

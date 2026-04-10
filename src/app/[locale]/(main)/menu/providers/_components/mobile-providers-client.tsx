@@ -1,23 +1,24 @@
 'use client';
 
-import { useCallback, useMemo, useState, useTransition } from 'react';
+import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 import { useRouter } from '@/i18n/routing';
-import { Search, X, Truck } from 'lucide-react';
+import { Truck } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import { Input } from '@/components/ui/input';
 import {
   Drawer,
   DrawerContent,
+  DrawerFooter,
   DrawerHeader,
   DrawerTitle,
-  DrawerFooter,
 } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { MobileSearchBar } from '@/components/forms/mobile-search-bar';
 import { deleteProviderAction } from '@/actions/providers.action';
 import { getErrorKey } from '@/lib/error-message';
 import { useDebouncedUrlParam } from '@/hooks/use-debounced-url-param';
+import { normalizeSearchText } from '@/lib/normalize-search';
 import { ProviderCard } from './provider-card';
 import { ProviderFormDrawer } from './provider-form-drawer';
 import { Fab } from '../../inventory/_components/fab';
@@ -33,72 +34,46 @@ export function MobileProvidersClient({ initialData }: Props) {
   const router = useRouter();
   const [, startTransition] = useTransition();
 
-  const [inputValue, setInputValue, search] = useDebouncedUrlParam('q');
+  const [data, setData] = useState<ProviderSummary[]>(initialData);
+  useEffect(() => { setData(initialData); }, [initialData]);
+
+  const refresh = useCallback(() => startTransition(() => router.refresh()), [router]);
+
+  const [inputValue, setInputValue, search] = useDebouncedUrlParam('q', 300, normalizeSearchText);
   const [selected, setSelected] = useState<ProviderSummary | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<ProviderSummary | undefined>();
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase();
-    return !q ? initialData : initialData.filter((p) => p.name.toLowerCase().includes(q));
-  }, [initialData, search]);
+  const filtered = useMemo(
+    () => !search ? data : data.filter((p) => normalizeSearchText(p.name).includes(search)),
+    [data, search]
+  );
 
-  const handleSelect = useCallback((p: ProviderSummary) => {
-    setSelected(p);
-    setDetailOpen(true);
-  }, []);
+  const handleSelect = useCallback((provider: ProviderSummary) => { setSelected(provider); setDetailOpen(true); }, []);
+  const handleOpenAdd = useCallback(() => { setEditing(undefined); setFormOpen(true); }, []);
+  const handleEdit = useCallback((provider: ProviderSummary) => { setDetailOpen(false); setEditing(provider); setFormOpen(true); }, []);
 
-  const handleOpenAdd = useCallback(() => {
-    setEditing(undefined);
-    setFormOpen(true);
-  }, []);
-
-  const handleEdit = useCallback((p: ProviderSummary) => {
-    setDetailOpen(false);
-    setEditing(p);
-    setFormOpen(true);
-  }, []);
-
-  const handleDelete = useCallback(async (p: ProviderSummary) => {
-    if (p.totalProducts > 0) {
-      toast.error(t('deleteError'));
-      return;
-    }
+  const handleDelete = useCallback(async (provider: ProviderSummary) => {
+    if (provider.totalProducts > 0) { toast.error(t('deleteError')); return; }
     setIsDeleting(true);
     try {
-      const result = await deleteProviderAction(p.id);
-      if (!result.success) {
-        toast.error(tCommon(getErrorKey(result.error)));
-        return;
-      }
+      const result = await deleteProviderAction(provider.id);
+      if (!result.success) { toast.error(tCommon(getErrorKey(result.error))); return; }
       toast.success(t('deleteSuccess'));
       setDetailOpen(false);
-      startTransition(() => router.refresh());
+      refresh();
     } catch {
       toast.error(tCommon('error'));
     } finally {
       setIsDeleting(false);
     }
-  }, [t, router, tCommon]);
+  }, [t, tCommon, refresh]);
 
   return (
     <>
-      <div className="relative px-4 py-2">
-        <Search className="absolute left-7 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-        <Input
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          placeholder={t('searchPlaceholder')}
-          className="pl-9 pr-9 bg-muted border-0 rounded-xl h-10"
-        />
-        {inputValue && (
-          <button onClick={() => setInputValue('')} className="absolute right-7 top-1/2 -translate-y-1/2 text-muted-foreground" aria-label="Xóa tìm kiếm">
-            <X className="h-4 w-4" />
-          </button>
-        )}
-      </div>
+      <MobileSearchBar value={inputValue} onChange={setInputValue} placeholder={t('searchPlaceholder')} clearLabel={tCommon('clearSearch')} />
 
       <p className="px-4 pb-1 text-xs text-muted-foreground">{filtered.length} {t('countLabel')}</p>
 
@@ -114,8 +89,8 @@ export function MobileProvidersClient({ initialData }: Props) {
         </div>
       ) : (
         <div className="divide-y divide-border">
-          {filtered.map((p) => (
-            <ProviderCard key={p.id} provider={p} onClick={() => handleSelect(p)} />
+          {filtered.map((provider) => (
+            <ProviderCard key={provider.id} provider={provider} onClick={() => handleSelect(provider)} />
           ))}
         </div>
       )}
@@ -124,9 +99,7 @@ export function MobileProvidersClient({ initialData }: Props) {
 
       <Drawer open={detailOpen} onOpenChange={setDetailOpen}>
         <DrawerContent className="max-h-[50vh]">
-          <DrawerHeader>
-            <DrawerTitle>{selected?.name}</DrawerTitle>
-          </DrawerHeader>
+          <DrawerHeader><DrawerTitle>{selected?.name}</DrawerTitle></DrawerHeader>
           {selected && (
             <div className="px-4 divide-y divide-border/60">
               <div className="flex justify-between py-3 text-sm">
@@ -137,15 +110,9 @@ export function MobileProvidersClient({ initialData }: Props) {
           )}
           <Separator className="mt-2" />
           <DrawerFooter className="flex-row gap-2">
-            <Button variant="outline" className="flex-1" onClick={() => setDetailOpen(false)}>
-              {tCommon('close')}
-            </Button>
-            <Button variant="outline" className="flex-1" onClick={() => selected && handleEdit(selected)}>
-              {tCommon('edit')}
-            </Button>
-            <Button variant="destructive" className="flex-1" onClick={() => selected && handleDelete(selected)} disabled={isDeleting}>
-              {tCommon('delete')}
-            </Button>
+            <Button variant="outline" className="flex-1" onClick={() => setDetailOpen(false)}>{tCommon('close')}</Button>
+            <Button variant="outline" className="flex-1" onClick={() => selected && handleEdit(selected)}>{tCommon('edit')}</Button>
+            <Button variant="destructive" className="flex-1" onClick={() => selected && handleDelete(selected)} disabled={isDeleting}>{tCommon('delete')}</Button>
           </DrawerFooter>
         </DrawerContent>
       </Drawer>
@@ -154,7 +121,7 @@ export function MobileProvidersClient({ initialData }: Props) {
         open={formOpen}
         onOpenChange={setFormOpen}
         provider={editing}
-        onSuccess={() => setFormOpen(false)}
+        onSuccess={() => { setFormOpen(false); refresh(); }}
       />
     </>
   );

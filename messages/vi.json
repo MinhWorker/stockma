@@ -22,6 +22,7 @@
     "view": "Xem",
     "add": "Thêm",
     "search": "Tìm kiếm",
+    "clearSearch": "Xóa tìm kiếm",
     "filter": "Lọc",
     "export": "Xuất",
     "download": "Tải xuống",
@@ -105,6 +106,20 @@
     "providerLabel": "Nhà cung cấp",
     "variantsTitle": "Phân loại",
     "variantStock": "Tồn kho",
+    "variantNew": "mới",
+    "variantUnsaved": "{count} chưa lưu",
+    "variantNamePlaceholder": "Tên phân loại mới *",
+    "variantCostPricePlaceholder": "Giá nhập *",
+    "variantPricePlaceholder": "Giá bán *",
+    "variantUnitPlaceholder": "Đơn vị",
+    "variantAdd": "Thêm phân loại",
+    "variantSave": "Lưu",
+    "variantCancel": "Hủy",
+    "variantPriceManagedByVariant": "Giá được quản lý theo từng phân loại",
+    "variantDiscardTitle": "Bỏ thay đổi phân loại?",
+    "variantDiscardDesc": "Bạn có {count} thay đổi phân loại chưa được lưu. Nếu đóng, tất cả thay đổi sẽ bị mất.",
+    "variantDiscardContinue": "Tiếp tục chỉnh sửa",
+    "variantDiscardConfirm": "Bỏ thay đổi",
     "columns": {
       "sku": "Mã SKU",
       "name": "Tên sản phẩm",
@@ -530,6 +545,7 @@
     "addCategory": "Thêm danh mục",
     "editCategory": "Sửa danh mục",
     "searchPlaceholder": "Tìm theo tên...",
+    "countLabel": "{count} danh mục",
     "columns": {
       "name": "Tên danh mục",
       "state": "Trạng thái",
@@ -631,3 +647,9 @@
     "staff": "Nhân viên"
   }
 }
+
+
+
+
+
+

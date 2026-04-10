@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { PriceInput } from '@/components/forms/price-input';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
@@ -115,7 +116,7 @@ export function OrderReviewDrawer() {
                 </div>
                 <div className="space-y-1">
                   <p className="text-sm font-medium">{t('paidAmount')}</p>
-                  <Input type="number" min={0} value={global.paidAmount} onChange={(e) => actions.setGlobal('paidAmount', e.target.value)} placeholder="0" />
+                  <PriceInput value={global.paidAmount} onChange={(v) => actions.setGlobal('paidAmount', String(v || ''))} placeholder="0" />
                 </div>
               </div>
             )}
@@ -163,11 +164,9 @@ export function OrderReviewDrawer() {
                     {global.stockOutType !== 'transfer' && (
                       <div className="space-y-1">
                         <p className="text-xs text-muted-foreground">{t('salePrice')}</p>
-                        <Input
-                          type="number"
-                          min={0}
+                        <PriceInput
                           value={item.salePrice}
-                          onChange={(e) => actions.setSalePrice(item.key, e.target.value)}
+                          onChange={(v) => actions.setSalePrice(item.key, String(v || ''))}
                           placeholder={String(effectivePrice)}
                           className="h-8 text-sm"
                         />

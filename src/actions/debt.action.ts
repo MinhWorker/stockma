@@ -30,7 +30,7 @@ export async function addPaymentAction(
 ): Promise<ActionResult<import('@/services/types').DebtGroupSummary>> {
   try {
     const result = await addDebtPayment(debtGroupId, amount, note, userId);
-    revalidateTag(DEBT_CACHE_TAG, 'default');
+    revalidateTag(DEBT_CACHE_TAG, { expire: 0 });
     return { success: true, data: result };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
@@ -42,9 +42,10 @@ export async function closeDebtAction(
 ): Promise<ActionResult<import('@/services/types').DebtGroupSummary>> {
   try {
     const result = await closeDebt(debtGroupId);
-    revalidateTag(DEBT_CACHE_TAG, 'default');
+    revalidateTag(DEBT_CACHE_TAG, { expire: 0 });
     return { success: true, data: result };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
   }
 }
+

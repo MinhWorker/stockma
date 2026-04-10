@@ -17,9 +17,9 @@ export async function getCategoriesAction() {
   return getAllCategories();
 }
 
-export const createCategoryAction = withUser(async (user, data: { name: string; state: string }): Promise<ActionResult> => {
+export const createCategoryAction = withUser(async (user, data: { name: string; state?: string }): Promise<ActionResult> => {
   try {
-    const category = await createCategory(data);
+    const category = await createCategory({ name: data.name, state: data.state ?? 'active' });
     await logActivity({
       action: 'create',
       entityType: 'Category',
@@ -28,9 +28,9 @@ export const createCategoryAction = withUser(async (user, data: { name: string; 
       description: `Tạo danh mục "${category.name}"`,
       userId: user.id,
     });
-    revalidateTag(CATEGORY_TAG, 'default');
-    revalidateTag('products', 'default');
-    revalidateTag(ACTIVITY_CACHE_TAG, 'default');
+    revalidateTag(CATEGORY_TAG, { expire: 0 });
+    revalidateTag('products', { expire: 0 });
+    revalidateTag(ACTIVITY_CACHE_TAG, { expire: 0 });
     return { success: true };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
@@ -48,9 +48,9 @@ export const updateCategoryAction = withUser(async (user, id: number, data: { na
       description: `Cập nhật danh mục "${category.name}"`,
       userId: user.id,
     });
-    revalidateTag(CATEGORY_TAG, 'default');
-    revalidateTag('products', 'default');
-    revalidateTag(ACTIVITY_CACHE_TAG, 'default');
+    revalidateTag(CATEGORY_TAG, { expire: 0 });
+    revalidateTag('products', { expire: 0 });
+    revalidateTag(ACTIVITY_CACHE_TAG, { expire: 0 });
     return { success: true };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
@@ -69,10 +69,11 @@ export const deleteCategoryAction = withUser(async (user, id: number): Promise<A
       description: `Xóa danh mục "${category?.name ?? id}"`,
       userId: user.id,
     });
-    revalidateTag(CATEGORY_TAG, 'default');
-    revalidateTag(ACTIVITY_CACHE_TAG, 'default');
+    revalidateTag(CATEGORY_TAG, { expire: 0 });
+    revalidateTag(ACTIVITY_CACHE_TAG, { expire: 0 });
     return { success: true };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
   }
 });
+

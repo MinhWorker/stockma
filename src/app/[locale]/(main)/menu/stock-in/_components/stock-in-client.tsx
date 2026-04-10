@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { FormField } from '@/components/forms/form-field';
+import { PriceInput } from '@/components/forms/price-input';
+import { ProductCombobox } from '@/components/forms/product-combobox';
 import {
   Combobox,
   ComboboxInput,
@@ -54,14 +56,6 @@ export function StockInClient() {
   const hasVariants = (selectedProduct?.variants?.length ?? 0) > 0;
   const selectedVariant = selectedProduct?.variants?.find((v) => v.id === variantId);
   const effectiveCostPrice = selectedVariant?.effectiveCostPrice ?? selectedProduct?.costPrice;
-
-  const productInputValue = productId && !productSearch
-    ? (selectedProduct?.name ?? '')
-    : productSearch;
-
-  const filteredProducts = productSearch
-    ? products.filter((p) => p.name.toLowerCase().includes(productSearch.toLowerCase()))
-    : products;
 
   const filteredVariants = variantSearch
     ? (selectedProduct?.variants ?? []).filter((v) =>
@@ -140,10 +134,10 @@ export function StockInClient() {
           <p className="text-sm text-muted-foreground">{t('tabs.stockIn')}</p>
         </div>
         <div className="flex gap-3">
-          <Button variant="outline" onClick={handleClose}>
+          <Button variant="outline" className="min-h-[44px]" onClick={handleClose}>
             {tCommon('close')}
           </Button>
-          <Button onClick={handleReset}>{t('newTransaction')}</Button>
+          <Button className="min-h-[44px]" onClick={handleReset}>{t('newTransaction')}</Button>
         </div>
       </div>
     );
@@ -152,31 +146,14 @@ export function StockInClient() {
   return (
     <div className="space-y-4 px-4 py-4">
       <FormField label={t('form.product')} required error={errors.productId}>
-        <Combobox
-          value={productId || null}
-          onValueChange={(v) => handleProductChange(v as number)}
-        >
-          <ComboboxInput
-            placeholder={t('form.productPlaceholder')}
-            value={productInputValue}
-            onChange={(e) => {
-              setProductSearch(e.target.value);
-              if (!e.target.value) handleProductChange(0);
-            }}
-            aria-invalid={!!errors.productId}
-          />
-          <ComboboxContent>
-            <ComboboxList>
-              <ComboboxEmpty>{tCommon('noResults')}</ComboboxEmpty>
-              {filteredProducts.map((p) => (
-                <ComboboxItem key={p.id} value={p.id}>
-                  <span className="flex-1 truncate">{p.name}</span>
-                  <span className="ml-2 text-xs text-muted-foreground">{p.categoryName}</span>
-                </ComboboxItem>
-              ))}
-            </ComboboxList>
-          </ComboboxContent>
-        </Combobox>
+        <ProductCombobox
+          products={products}
+          productId={productId}
+          productSearch={productSearch}
+          onProductChange={handleProductChange}
+          onSearchChange={(s) => { setProductSearch(s); if (!s) handleProductChange(0); }}
+          error={!!errors.productId}
+        />
         {selectedProduct && (
           <p className="text-xs text-muted-foreground mt-1">
             {t('form.currentStock', { qty: selectedProduct.stockQty })}
@@ -227,12 +204,12 @@ export function StockInClient() {
       <FormField label={t('form.quantity')} required error={errors.quantity} htmlFor={quantityId}>
         <Input
           id={quantityId}
-          type="number"
-          min={1}
-          step={1}
+          inputMode="numeric"
+          pattern="[0-9]*"
           value={quantity || ''}
           onChange={(e) => {
-            setQuantity(Math.floor(Number(e.target.value)));
+            const parsed = Math.floor(Number(e.target.value.replace(/[^0-9]/g, '')));
+            setQuantity(parsed || 0);
             setErrors((prev) => ({ ...prev, quantity: '' }));
           }}
           placeholder={t('form.quantityPlaceholder')}
@@ -242,11 +219,9 @@ export function StockInClient() {
 
       {/* Purchase price — optional */}
       <FormField label={t('form.purchasePrice')}>
-        <Input
-          type="number"
-          min={0}
+        <PriceInput
           value={purchasePrice}
-          onChange={(e) => setPurchasePrice(e.target.value)}
+          onChange={(v) => setPurchasePrice(String(v || ''))}
           placeholder={effectiveCostPrice != null
             ? `${t('form.purchasePriceDefault')}: ${effectiveCostPrice.toLocaleString()}`
             : t('form.purchasePricePlaceholder')}

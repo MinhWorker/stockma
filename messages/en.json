@@ -22,6 +22,7 @@
     "view": "View",
     "add": "Add",
     "search": "Search",
+    "clearSearch": "Clear search",
     "filter": "Filter",
     "export": "Export",
     "download": "Download",
@@ -105,6 +106,20 @@
     "providerLabel": "Provider",
     "variantsTitle": "Variants",
     "variantStock": "Stock",
+    "variantNew": "new",
+    "variantUnsaved": "{count} unsaved",
+    "variantNamePlaceholder": "Variant name *",
+    "variantCostPricePlaceholder": "Cost price *",
+    "variantPricePlaceholder": "Retail price *",
+    "variantUnitPlaceholder": "Unit",
+    "variantAdd": "Add variant",
+    "variantSave": "Save",
+    "variantCancel": "Cancel",
+    "variantPriceManagedByVariant": "Price is managed per variant",
+    "variantDiscardTitle": "Discard variant changes?",
+    "variantDiscardDesc": "You have {count} unsaved variant changes. If you close, all changes will be lost.",
+    "variantDiscardContinue": "Keep editing",
+    "variantDiscardConfirm": "Discard changes",
     "columns": {
       "sku": "SKU",
       "name": "Product Name",
@@ -530,6 +545,7 @@
     "addCategory": "Add Category",
     "editCategory": "Edit Category",
     "searchPlaceholder": "Search by name...",
+    "countLabel": "{count} categories",
     "columns": {
       "name": "Category Name",
       "state": "State",
@@ -631,3 +647,6 @@
     "staff": "Staff"
   }
 }
+
+
+

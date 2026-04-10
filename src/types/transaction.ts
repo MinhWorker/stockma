@@ -18,6 +18,7 @@ export interface Transaction {
 export interface TransactionFormValues {
   type: TransactionType;
   productId: number;
+  variantId?: number;
   quantity: number;
   note: string;
 }

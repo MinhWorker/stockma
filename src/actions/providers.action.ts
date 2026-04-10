@@ -28,8 +28,8 @@ export const createProviderAction = withUser(async (user, data: { name: string }
       description: `Tạo nhà cung cấp "${provider.name}"`,
       userId: user.id,
     });
-    revalidateTag(PROVIDER_TAG, 'default');
-    revalidateTag(ACTIVITY_CACHE_TAG, 'default');
+    revalidateTag(PROVIDER_TAG, { expire: 0 });
+    revalidateTag(ACTIVITY_CACHE_TAG, { expire: 0 });
     return { success: true };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
@@ -47,9 +47,9 @@ export const updateProviderAction = withUser(async (user, id: number, data: { na
       description: `Cập nhật nhà cung cấp "${provider.name}"`,
       userId: user.id,
     });
-    revalidateTag(PROVIDER_TAG, 'default');
-    revalidateTag('products', 'default');
-    revalidateTag(ACTIVITY_CACHE_TAG, 'default');
+    revalidateTag(PROVIDER_TAG, { expire: 0 });
+    revalidateTag('products', { expire: 0 });
+    revalidateTag(ACTIVITY_CACHE_TAG, { expire: 0 });
     return { success: true };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
@@ -68,10 +68,11 @@ export const deleteProviderAction = withUser(async (user, id: number): Promise<A
       description: `Xóa nhà cung cấp "${provider?.name ?? id}"`,
       userId: user.id,
     });
-    revalidateTag(PROVIDER_TAG, 'default');
-    revalidateTag(ACTIVITY_CACHE_TAG, 'default');
+    revalidateTag(PROVIDER_TAG, { expire: 0 });
+    revalidateTag(ACTIVITY_CACHE_TAG, { expire: 0 });
     return { success: true };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
   }
 });
+

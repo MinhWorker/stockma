@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useId, useTransition, useState } from 'react';
-import { useRouter } from '@/i18n/routing';
+import { useEffect, useId, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslations } from 'next-intl';
@@ -29,8 +28,6 @@ interface Props {
 export function ProviderFormDrawer({ open, onOpenChange, provider, onSuccess }: Props) {
   const t = useTranslations('providers');
   const tCommon = useTranslations('common');
-  const router = useRouter();
-  const [, startTransition] = useTransition();
   const nameId = useId();
 
   const [name, setName] = useState('');
@@ -59,9 +56,8 @@ export function ProviderFormDrawer({ open, onOpenChange, provider, onSuccess }: 
         return;
       }
       toast.success(t('saveSuccess'));
-      onSuccess();
       onOpenChange(false);
-      startTransition(() => router.refresh());
+      onSuccess();
     } catch {
       toast.error(tCommon('error'));
     } finally {

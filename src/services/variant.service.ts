@@ -94,19 +94,12 @@ export async function getVariantById(variantId: number): Promise<VariantSummary 
 
 export async function createVariant(input: CreateVariantInput): Promise<VariantSummary> {
   requireNonEmpty(input.name, 'Variant name');
-  if (input.costPrice !== undefined) requirePositive(input.costPrice, 'Variant cost price');
-  if (input.price !== undefined) requirePositive(input.price, 'Variant price');
+  requirePositive(input.costPrice ?? 0, 'Variant cost price');
+  requirePositive(input.price ?? 0, 'Variant price');
+  if (input.costPrice === undefined || input.costPrice === null) throw new Error('ERR_VARIANT_PRICE_REQUIRED');
+  if (input.price === undefined || input.price === null) throw new Error('ERR_VARIANT_PRICE_REQUIRED');
 
-  const product = await prisma.product.findUniqueOrThrow({
-    where: { id: input.productId },
-    select: { costPrice: true, price: true, unit: true },
-  });
-
-  const { effectiveCostPrice, effectivePrice } = resolveEffectivePrices(product, {
-    costPrice: input.costPrice ?? null,
-    price: input.price ?? null,
-  });
-  if (effectivePrice < effectiveCostPrice) throw new Error('ERR_PRICE_BELOW_COST');
+  if (input.price < input.costPrice) throw new Error('ERR_PRICE_BELOW_COST');
 
   try {
     const variant = await prisma.productVariant.create({
@@ -132,20 +125,10 @@ export async function updateVariant(id: number, input: UpdateVariantInput): Prom
   if (input.name !== undefined) requireNonEmpty(input.name, 'Variant name');
   if (input.costPrice !== undefined) requirePositive(input.costPrice, 'Variant cost price');
   if (input.price !== undefined) requirePositive(input.price, 'Variant price');
-
-  const existing = await prisma.productVariant.findUniqueOrThrow({
-    where: { id },
-    include: variantInclude,
-  });
-
-  const merged = {
-    costPrice: input.costPrice !== undefined ? input.costPrice : existing.costPrice,
-    price: input.price !== undefined ? input.price : existing.price,
-    unit: input.unit !== undefined ? input.unit : existing.unit,
-  };
-
-  const { effectiveCostPrice, effectivePrice } = resolveEffectivePrices(existing.product, merged);
-  if (effectivePrice < effectiveCostPrice) throw new Error('ERR_PRICE_BELOW_COST');
+  // Prices are required when provided (no longer optional)
+  if (input.costPrice !== null && input.costPrice !== undefined && input.price !== null && input.price !== undefined) {
+    if (input.price < input.costPrice) throw new Error('ERR_PRICE_BELOW_COST');
+  }
 
   try {
     const updated = await prisma.productVariant.update({

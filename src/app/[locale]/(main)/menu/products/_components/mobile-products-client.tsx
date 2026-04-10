@@ -1,34 +1,47 @@
 'use client';
 
-import { useCallback, useMemo } from 'react';
-import { Search, X, Package } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
+import { useRouter } from '@/i18n/routing';
+import { Package } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { Input } from '@/components/ui/input';
+import { MobileSearchBar } from '@/components/forms/mobile-search-bar';
+import { normalizeSearchText } from '@/lib/normalize-search';
 import type { ProductSummary, ProductStatus } from '@/services/types';
-
-type StatusFilter = 'all' | ProductStatus;
 import { MobileProductCard } from './mobile-product-card';
 import { ProductDetailDrawer } from './product-detail-drawer';
 import { MobileProductFormDrawer } from './mobile-product-form-drawer';
 import { Fab } from '../../inventory/_components/fab';
 import { ProductsProvider, useProducts } from './products-context';
 
+type StatusFilter = 'all' | ProductStatus;
+
 interface Props {
   initialData: ProductSummary[];
   openAddForm?: boolean;
 }
 
-// Root export — wraps with provider (state-lift-state)
 export function MobileProductsClient({ initialData, openAddForm }: Props) {
+  const [data, setData] = useState<ProductSummary[]>(initialData);
+
+  // Sync when RSC re-renders with fresh data after router.refresh()
+  useEffect(() => {
+    setData(initialData);
+  }, [initialData]);
+
+  const router = useRouter();
+  const [, startTransition] = useTransition();
+  const refresh = useCallback(() => {
+    startTransition(() => router.refresh());
+  }, [router]);
+
   return (
     <ProductsProvider openAddForm={openAddForm}>
-      <ProductsShell initialData={initialData} />
+      <ProductsShell data={data} onRefresh={refresh} />
     </ProductsProvider>
   );
 }
 
-// Inner shell — consumes context, no prop drilling
-function ProductsShell({ initialData }: { initialData: ProductSummary[] }) {
+function ProductsShell({ data, onRefresh }: { data: ProductSummary[]; onRefresh: () => void }) {
   const t = useTranslations('products');
   const tCommon = useTranslations('common');
   const { state, actions } = useProducts();
@@ -40,42 +53,31 @@ function ProductsShell({ initialData }: { initialData: ProductSummary[] }) {
   ];
 
   const filtered = useMemo(() => {
-    const q = state.search.toLowerCase();
-    return initialData.filter((p) => {
-      const matchSearch = !q || p.name.toLowerCase().includes(q);
+    return data.filter((p) => {
+      const matchSearch = !state.search || normalizeSearchText(p.name).includes(state.search);
       const matchStatus = state.statusFilter === 'all' || p.status === state.statusFilter;
       return matchSearch && matchStatus;
     });
-  }, [initialData, state.search, state.statusFilter]);
+  }, [data, state.search, state.statusFilter]);
 
   const hasFilters = state.search !== '' || state.statusFilter !== 'all';
 
   const handleDetailClose = useCallback((open: boolean) => { if (!open) actions.closeDetail(); }, [actions]);
   const handleFormClose = useCallback((open: boolean) => { if (!open) actions.closeForm(); }, [actions]);
-  const handleFormSuccess = useCallback(() => actions.closeForm(), [actions]);
+  const handleFormSuccess = useCallback(() => {
+    actions.closeForm();
+    onRefresh();
+  }, [actions, onRefresh]);
 
   return (
     <>
-      {/* Search */}
-      <div className="relative px-4 py-2">
-        <Search className="absolute left-7 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-        <Input
-          value={state.inputValue}
-          onChange={(e) => actions.setInputValue(e.target.value)}
-          placeholder={t('searchPlaceholder')}
-          className="pl-9 pr-9 bg-muted border-0 rounded-xl h-10"
-        />
-        {state.inputValue && (
-          <button
-            onClick={() => actions.setInputValue('')}
-            className="absolute right-7 top-1/2 -translate-y-1/2 text-muted-foreground"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        )}
-      </div>
+      <MobileSearchBar
+        value={state.inputValue}
+        onChange={actions.setInputValue}
+        placeholder={t('searchPlaceholder')}
+        clearLabel={tCommon('clearSearch')}
+      />
 
-      {/* Status filter chips */}
       <div className="flex gap-2 overflow-x-auto px-4 py-2 scrollbar-none">
         {STATUS_TABS.map((tab) => (
           <button
@@ -95,7 +97,6 @@ function ProductsShell({ initialData }: { initialData: ProductSummary[] }) {
 
       <p className="px-4 pb-1 text-xs text-muted-foreground">{t('countLabel', { count: filtered.length })}</p>
 
-      {/* List */}
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center gap-3 py-20 text-center">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">

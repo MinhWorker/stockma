@@ -4,13 +4,14 @@ import { createContext, use, useCallback, useEffect, useMemo, useState, type Rea
 import { useSearchParams } from 'next/navigation';
 import { useDebouncedUrlParam } from '@/hooks/use-debounced-url-param';
 import { useRouter, usePathname } from '@/i18n/routing';
+import { normalizeSearchText } from '@/lib/normalize-search';
 import type { ProductSummary, ProductStatus } from '@/services/types';
 
 type StatusFilter = 'all' | ProductStatus;
 
 interface ProductsState {
-  inputValue: string; // controlled input — updates instantly
-  search: string; // debounced URL value — used for filtering
+  inputValue: string;
+  search: string;
   statusFilter: StatusFilter;
   selectedProduct: ProductSummary | null;
   detailOpen: boolean;
@@ -52,7 +53,11 @@ export function ProductsProvider({ children, openAddForm }: Props) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const [inputValue, setInputValue, search] = useDebouncedUrlParam('q');
+  const [inputValue, setInputValue, search] = useDebouncedUrlParam(
+    'q',
+    300,
+    normalizeSearchText
+  );
   const statusFilter = (searchParams.get('status') ?? 'all') as StatusFilter;
 
   const [selectedProduct, setSelectedProduct] = useState<ProductSummary | null>(null);
@@ -60,7 +65,6 @@ export function ProductsProvider({ children, openAddForm }: Props) {
   const [formOpen, setFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ProductSummary | undefined>();
 
-  // Delay opening the add form until after the page transition animation completes
   useEffect(() => {
     if (!openAddForm) return;
     const id = setTimeout(() => setFormOpen(true), 420);

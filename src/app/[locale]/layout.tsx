@@ -5,9 +5,14 @@ import { getMessages } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { routing } from '@/i18n/routing';
+import type { Viewport } from 'next';
 import '../globals.css';
 import { cn } from '@/lib/utils';
 import RootLayoutClient from './RootLayoutClient';
+
+export const viewport: Viewport = {
+  interactiveWidget: 'resizes-content',
+};
 
 const inter = Inter({
   variable: '--font-sans',

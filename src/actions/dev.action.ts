@@ -18,12 +18,13 @@ export async function resetAppDataAction(): Promise<{ success: boolean; error?: 
     await prisma.productVariant.deleteMany();
     await prisma.product.deleteMany();
 
-    revalidateTag('products', 'default');
-    revalidateTag('transactions', 'default');
-    revalidateTag('activity', 'default');
+    revalidateTag('products', { expire: 0 });
+    revalidateTag('transactions', { expire: 0 });
+    revalidateTag('activity', { expire: 0 });
 
     return { success: true };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
   }
 }
+

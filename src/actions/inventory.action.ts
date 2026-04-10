@@ -58,8 +58,8 @@ export async function createTransactionAction(
       stockOutType: payload.type === 'stock_out' ? 'transfer' : undefined,
     });
 
-    revalidateTag(TRANSACTION_CACHE_TAG, 'default');
-    revalidateTag(PRODUCT_CACHE_TAG, 'default');
+    revalidateTag(TRANSACTION_CACHE_TAG, { expire: 0 });
+    revalidateTag(PRODUCT_CACHE_TAG, { expire: 0 });
 
     // Fire push notifications (non-blocking)
     const product = await getProductById(payload.productId);
@@ -103,8 +103,8 @@ export async function createStockOutAction(
       paidAmount: payload.paidAmount,
     });
 
-    revalidateTag(TRANSACTION_CACHE_TAG, 'default');
-    revalidateTag(PRODUCT_CACHE_TAG, 'default');
+    revalidateTag(TRANSACTION_CACHE_TAG, { expire: 0 });
+    revalidateTag(PRODUCT_CACHE_TAG, { expire: 0 });
 
     return { success: true, data: result };
   } catch (err) {
@@ -115,3 +115,4 @@ export async function createStockOutAction(
 export async function getInventoriesAction() {
   return getAllInventories();
 }
+

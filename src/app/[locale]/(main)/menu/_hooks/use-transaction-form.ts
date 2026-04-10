@@ -36,6 +36,8 @@ export function useTransactionForm(defaultType: TransactionType) {
   }, []);
 
   const selectedProduct = products.find((p) => p.id === values.productId);
+  const hasVariants = (selectedProduct?.variants?.length ?? 0) > 0;
+  const selectedVariant = selectedProduct?.variants?.find((v) => v.id === values.variantId);
 
   // Stable — uses functional setState, no state deps (rerender-functional-setstate)
   const set = useCallback(
@@ -53,7 +55,7 @@ export function useTransactionForm(defaultType: TransactionType) {
 
   const handleProductSearch = useCallback((v: string) => {
     setProductSearch(v);
-    if (!v) set('productId', 0);
+    if (!v) { set('productId', 0); set('variantId', undefined); }
   }, [set]);
 
   // Derived — no state needed (rerender-derived-state-no-effect)
@@ -73,6 +75,11 @@ export function useTransactionForm(defaultType: TransactionType) {
     const e: Partial<Record<keyof TransactionFormValues, string>> = {};
     if (!current.productId) e.productId = tCommon('required');
     if (!current.quantity || current.quantity < 1) e.quantity = tCommon('required');
+    // Require variant selection when product has variants
+    const product = products.find((p) => p.id === current.productId);
+    if ((product?.variants?.length ?? 0) > 0 && !current.variantId) {
+      e.variantId = tCommon('required');
+    }
 
     if (Object.keys(e).length) {
       setErrors(e);
@@ -84,6 +91,7 @@ export function useTransactionForm(defaultType: TransactionType) {
       const result = await createTransactionAction({
         type: current.type,
         productId: current.productId,
+        variantId: current.variantId,
         quantity: current.quantity,
         note: current.note,
         userId: session?.user?.id ?? '',
@@ -126,6 +134,8 @@ export function useTransactionForm(defaultType: TransactionType) {
     setProductSearch,
     handleProductSearch,
     selectedProduct,
+    hasVariants,
+    selectedVariant,
     set,
     handleSubmit,
     handleReset,

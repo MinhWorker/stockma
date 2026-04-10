@@ -9,28 +9,41 @@ import { useSearchParams } from 'next/navigation';
  * - Read immediately from URL (for filtering server data)
  * - Written to URL with debounce (to avoid router.replace on every keystroke)
  *
- * Returns [inputValue, setInputValue, urlValue]
+ * Returns [inputValue, setInputValue, urlValue, rawUrlValue]
  * - inputValue: controlled input state (updates instantly)
  * - setInputValue: call on onChange
- * - urlValue: debounced value synced to URL (use for filtering)
+ * - urlValue: debounced normalized value synced to URL (use for normalized filtering)
+ * - rawUrlValue: debounced raw value synced to URL (use for server fetching or custom logic)
  */
 export function useDebouncedUrlParam(
   paramKey: string,
-  debounceMs = 300
-): [string, (v: string) => void, string] {
+  debounceMs = 300,
+  normalizeValue?: (value: string) => string
+): [string, (v: string) => void, string, string] {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const urlValue = searchParams.get(paramKey) ?? '';
-  const [inputValue, setInputValueState] = useState(urlValue);
+  const rawUrlValue = searchParams.get(paramKey) ?? '';
+  const urlValue = normalizeValue ? normalizeValue(rawUrlValue) : rawUrlValue;
+  const [inputValue, setInputValueState] = useState(rawUrlValue);
 
-  // Keep input in sync if URL changes externally (e.g. back/forward)
-  useEffect(() => {
-    setInputValueState(urlValue);
-  }, [urlValue]);
-
+  // Track whether the last URL change was triggered by us (debounce write)
+  // so we don't reset the input on our own router.replace calls
+  const selfWriteRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Keep input in sync only for external URL changes (e.g. back/forward navigation)
+  useEffect(() => {
+    if (selfWriteRef.current) {
+      selfWriteRef.current = false;
+      return;
+    }
+    setInputValueState((currentValue) => {
+      const normalizedCurrent = normalizeValue ? normalizeValue(currentValue) : currentValue;
+      return normalizedCurrent === urlValue ? currentValue : rawUrlValue;
+    });
+  }, [rawUrlValue, urlValue, normalizeValue]);
 
   const setInputValue = useCallback(
     (v: string) => {
@@ -39,15 +52,17 @@ export function useDebouncedUrlParam(
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => {
         const params = new URLSearchParams(window.location.search);
-        if (v === '' || v === 'all') params.delete(paramKey);
-        else params.set(paramKey, v);
+        const nextUrlValue = normalizeValue ? normalizeValue(v) : v;
+        if (nextUrlValue === '' || nextUrlValue === 'all') params.delete(paramKey);
+        else params.set(paramKey, nextUrlValue);
         const qs = params.toString();
+        selfWriteRef.current = true;
         router.replace(`${pathname}${qs ? `?${qs}` : ''}` as Parameters<typeof router.replace>[0], {
           scroll: false,
         });
       }, debounceMs);
     },
-    [router, pathname, paramKey, debounceMs]
+    [router, pathname, paramKey, debounceMs, normalizeValue]
   );
 
   // Cleanup on unmount
@@ -58,5 +73,5 @@ export function useDebouncedUrlParam(
     []
   );
 
-  return [inputValue, setInputValue, urlValue];
+  return [inputValue, setInputValue, urlValue, rawUrlValue];
 }

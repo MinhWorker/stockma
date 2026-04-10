@@ -24,9 +24,9 @@ export const createInventoryAction = withUser(async (user, data: { name: string;
       description: `Tạo kho "${inventory.name}"`,
       userId: user.id,
     });
-    revalidateTag(INVENTORY_TAG, 'default');
-    revalidateTag('products', 'default');
-    revalidateTag(ACTIVITY_CACHE_TAG, 'default');
+    revalidateTag(INVENTORY_TAG, { expire: 0 });
+    revalidateTag('products', { expire: 0 });
+    revalidateTag(ACTIVITY_CACHE_TAG, { expire: 0 });
     return { success: true };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
@@ -44,8 +44,8 @@ export const updateInventoryAction = withUser(async (user, id: number, data: { n
       description: `Cập nhật kho "${inventory.name}"`,
       userId: user.id,
     });
-    revalidateTag(INVENTORY_TAG, 'default');
-    revalidateTag(ACTIVITY_CACHE_TAG, 'default');
+    revalidateTag(INVENTORY_TAG, { expire: 0 });
+    revalidateTag(ACTIVITY_CACHE_TAG, { expire: 0 });
     return { success: true };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
@@ -64,10 +64,11 @@ export const deleteInventoryAction = withUser(async (user, id: number): Promise<
       description: `Xóa kho "${inventory?.name ?? id}"`,
       userId: user.id,
     });
-    revalidateTag(INVENTORY_TAG, 'default');
-    revalidateTag(ACTIVITY_CACHE_TAG, 'default');
+    revalidateTag(INVENTORY_TAG, { expire: 0 });
+    revalidateTag(ACTIVITY_CACHE_TAG, { expire: 0 });
     return { success: true };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
   }
 });
+

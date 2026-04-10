@@ -42,8 +42,8 @@ export const createProductAction = withUser(async (user, input: CreateProductInp
       inventoryId: product.inventoryId,
       userId: user.id,
     });
-    revalidateTag(PRODUCT_CACHE_TAG, 'default');
-    revalidateTag(ACTIVITY_CACHE_TAG, 'default');
+    revalidateTag(PRODUCT_CACHE_TAG, { expire: 0 });
+    revalidateTag(ACTIVITY_CACHE_TAG, { expire: 0 });
     return { success: true };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
@@ -62,8 +62,8 @@ export const updateProductAction = withUser(async (user, id: number, input: Upda
       inventoryId: product.inventoryId,
       userId: user.id,
     });
-    revalidateTag(PRODUCT_CACHE_TAG, 'default');
-    revalidateTag(ACTIVITY_CACHE_TAG, 'default');
+    revalidateTag(PRODUCT_CACHE_TAG, { expire: 0 });
+    revalidateTag(ACTIVITY_CACHE_TAG, { expire: 0 });
     return { success: true };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
@@ -84,8 +84,8 @@ export const deleteProductAction = withUser(async (user, id: number): Promise<Ac
       inventoryId: product?.inventoryId,
       userId: user.id,
     });
-    revalidateTag(PRODUCT_CACHE_TAG, 'default');
-    revalidateTag(ACTIVITY_CACHE_TAG, 'default');
+    revalidateTag(PRODUCT_CACHE_TAG, { expire: 0 });
+    revalidateTag(ACTIVITY_CACHE_TAG, { expire: 0 });
     return { success: true };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
@@ -110,8 +110,8 @@ export const createVariantAction = withUser(async (
       description: `Tạo phân loại "${variant.name}" cho sản phẩm #${input.productId}`,
       userId: user.id,
     });
-    revalidateTag(PRODUCT_CACHE_TAG, 'default');
-    revalidateTag(ACTIVITY_CACHE_TAG, 'default');
+    revalidateTag(PRODUCT_CACHE_TAG, { expire: 0 });
+    revalidateTag(ACTIVITY_CACHE_TAG, { expire: 0 });
     return { success: true, data: variant };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
@@ -133,8 +133,8 @@ export const updateVariantAction = withUser(async (
       description: `Cập nhật phân loại "${variant.name}"`,
       userId: user.id,
     });
-    revalidateTag(PRODUCT_CACHE_TAG, 'default');
-    revalidateTag(ACTIVITY_CACHE_TAG, 'default');
+    revalidateTag(PRODUCT_CACHE_TAG, { expire: 0 });
+    revalidateTag(ACTIVITY_CACHE_TAG, { expire: 0 });
     return { success: true, data: variant };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
@@ -151,10 +151,68 @@ export const deleteVariantAction = withUser(async (user, id: number): Promise<Ac
       description: `Xóa phân loại #${id}`,
       userId: user.id,
     });
-    revalidateTag(PRODUCT_CACHE_TAG, 'default');
-    revalidateTag(ACTIVITY_CACHE_TAG, 'default');
+    revalidateTag(PRODUCT_CACHE_TAG, { expire: 0 });
+    revalidateTag(ACTIVITY_CACHE_TAG, { expire: 0 });
     return { success: true };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
   }
 });
+
+// ---------------------------------------------------------------------------
+// Batch variant sync — apply all pending ops in a single server call
+// ---------------------------------------------------------------------------
+
+export type VariantPendingOp =
+  | { type: 'create'; data: CreateVariantInput }
+  | { type: 'update'; id: number; data: UpdateVariantInput }
+  | { type: 'delete'; id: number };
+
+export const syncVariantsAction = withUser(async (
+  user,
+  productId: number,
+  productName: string,
+  ops: VariantPendingOp[]
+): Promise<ActionResult> => {
+  try {
+    for (const op of ops) {
+      if (op.type === 'create') {
+        const v = await createVariant(op.data);
+        await logActivity({
+          action: 'create',
+          entityType: 'ProductVariant',
+          entityId: v.id,
+          entityName: v.name,
+          description: `Tạo phân loại "${v.name}" cho sản phẩm "${productName}"`,
+          userId: user.id,
+        });
+      } else if (op.type === 'update') {
+        const v = await updateVariant(op.id, op.data);
+        await logActivity({
+          action: 'update',
+          entityType: 'ProductVariant',
+          entityId: v.id,
+          entityName: v.name,
+          description: `Cập nhật phân loại "${v.name}"`,
+          userId: user.id,
+        });
+      } else if (op.type === 'delete') {
+        await deleteVariant(op.id);
+        await logActivity({
+          action: 'delete',
+          entityType: 'ProductVariant',
+          entityId: op.id,
+          description: `Xóa phân loại #${op.id}`,
+          userId: user.id,
+        });
+      }
+    }
+    revalidateTag(PRODUCT_CACHE_TAG, { expire: 0 });
+    revalidateTag(ACTIVITY_CACHE_TAG, { expire: 0 });
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+  }
+});
+
+

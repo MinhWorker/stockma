@@ -28,9 +28,9 @@ export const createReturnAction = withUser(async (
       description: `Trả hàng "${result.productName}" — hoàn ${result.returnQty}, đổi ${result.replacementQty}`,
       userId: user.id,
     });
-    revalidateTag(TRANSACTION_CACHE_TAG, 'default');
-    revalidateTag(PRODUCT_CACHE_TAG, 'default');
-    revalidateTag(ACTIVITY_CACHE_TAG, 'default');
+    revalidateTag(TRANSACTION_CACHE_TAG, { expire: 0 });
+    revalidateTag(PRODUCT_CACHE_TAG, { expire: 0 });
+    revalidateTag(ACTIVITY_CACHE_TAG, { expire: 0 });
     return { success: true, data: result };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
@@ -43,3 +43,4 @@ export async function getReturnTransactionsAction(options?: {
 }) {
   return getReturnTransactions(options);
 }
+

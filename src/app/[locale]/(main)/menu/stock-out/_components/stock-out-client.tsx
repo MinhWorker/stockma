@@ -16,6 +16,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { PriceInput } from '@/components/forms/price-input';
+import { ProductCombobox } from '@/components/forms/product-combobox';
 import {
   Combobox,
   ComboboxInput,
@@ -93,14 +95,6 @@ export function StockOutClient() {
 
   const isRetailOrWholesale = stockOutType === 'retail' || stockOutType === 'wholesale';
 
-  const productInputValue = productId && !productSearch
-    ? (selectedProduct?.name ?? '')
-    : productSearch;
-
-  const filteredProducts = productSearch
-    ? products.filter((p) => p.name.toLowerCase().includes(productSearch.toLowerCase()))
-    : products;
-
   const filteredVariants = variantSearch
     ? (selectedProduct?.variants ?? []).filter((v) =>
         v.name.toLowerCase().includes(variantSearch.toLowerCase())
@@ -134,6 +128,7 @@ export function StockOutClient() {
     if (!productId) e.productId = tCommon('required');
     if (!quantity || quantity < 1) e.quantity = tCommon('required');
     if (!stockOutType) e.stockOutType = tCommon('required');
+    if (hasVariants && !variantId) e.variantId = tCommon('required');
 
     if (Object.keys(e).filter((k) => e[k]).length) {
       setErrors(e);
@@ -249,31 +244,14 @@ export function StockOutClient() {
 
       {/* Product selector */}
       <FormField label={t('form.product')} required error={errors.productId}>
-        <Combobox
-          value={productId || null}
-          onValueChange={(v) => handleProductChange(v as number)}
-        >
-          <ComboboxInput
-            placeholder={t('form.productPlaceholder')}
-            value={productInputValue}
-            onChange={(e) => {
-              setProductSearch(e.target.value);
-              if (!e.target.value) handleProductChange(0);
-            }}
-            aria-invalid={!!errors.productId}
-          />
-          <ComboboxContent>
-            <ComboboxList>
-              <ComboboxEmpty>{tCommon('noResults')}</ComboboxEmpty>
-              {filteredProducts.map((p) => (
-                <ComboboxItem key={p.id} value={p.id}>
-                  <span className="flex-1 truncate">{p.name}</span>
-                  <span className="ml-2 text-xs text-muted-foreground">{p.categoryName}</span>
-                </ComboboxItem>
-              ))}
-            </ComboboxList>
-          </ComboboxContent>
-        </Combobox>
+        <ProductCombobox
+          products={products}
+          productId={productId}
+          productSearch={productSearch}
+          onProductChange={handleProductChange}
+          onSearchChange={(s) => { setProductSearch(s); if (!s) handleProductChange(0); }}
+          error={!!errors.productId}
+        />
         {selectedProduct && (
           <p className="text-xs text-muted-foreground mt-1">
             {t('form.currentStock', { qty: selectedProduct.stockQty })}
@@ -283,13 +261,14 @@ export function StockOutClient() {
 
       {/* Variant selector */}
       {hasVariants && (
-        <FormField label="Phân loại">
+        <FormField label="Phân loại" required error={errors.variantId}>
           <Combobox
             value={variantId ?? null}
             onValueChange={(v) => {
               setVariantId(v as number | undefined);
               setVariantSearch('');
               setSalePrice('');
+              setErrors((prev) => ({ ...prev, variantId: '' }));
             }}
           >
             <ComboboxInput
@@ -301,6 +280,7 @@ export function StockOutClient() {
                 setVariantSearch(e.target.value);
                 if (!e.target.value) setVariantId(undefined);
               }}
+              aria-invalid={!!errors.variantId}
             />
             <ComboboxContent>
               <ComboboxList>
@@ -339,14 +319,10 @@ export function StockOutClient() {
       {/* Sale price — only for retail/wholesale */}
       {isRetailOrWholesale && (
         <FormField label="Giá bán">
-          <Input
-            type="number"
-            min={0}
+          <PriceInput
             value={salePrice}
-            onChange={(e) => setSalePrice(e.target.value)}
-            placeholder={effectivePrice != null
-              ? `Mặc định: ${effectivePrice.toLocaleString()}`
-              : 'Giá bán (tùy chọn)'}
+            onChange={(v) => setSalePrice(String(v || ''))}
+            placeholder={effectivePrice != null ? `Mặc định: ${effectivePrice.toLocaleString()}` : 'Giá bán (tùy chọn)'}
           />
         </FormField>
       )}
@@ -487,11 +463,9 @@ export function StockOutClient() {
             />
           </FormField>
           <FormField label="Đã thanh toán">
-            <Input
-              type="number"
-              min={0}
+            <PriceInput
               value={paidAmount}
-              onChange={(e) => setPaidAmount(e.target.value)}
+              onChange={(v) => setPaidAmount(String(v || ''))}
               placeholder="Số tiền đã trả (0 = chưa trả)"
             />
           </FormField>

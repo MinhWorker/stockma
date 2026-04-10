@@ -77,3 +77,4 @@ export async function updateNotificationPrefsByUserAction(
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
   }
 }
+

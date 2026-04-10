@@ -11,3 +11,4 @@ export async function getActivityLogsAction(options?: {
 }) {
   return getActivityLogs(options);
 }
+

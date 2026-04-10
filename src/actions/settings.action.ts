@@ -23,7 +23,6 @@ export async function saveGeneralSettingsAction(
 ): Promise<ActionResult> {
   try {
     // Placeholder — persist to DB via settings service when ready
-    console.log('[settings] saveGeneral', input);
     return { success: true };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
@@ -36,10 +35,11 @@ export async function saveNotificationSettingsAction(
 ): Promise<ActionResult> {
   try {
     // Placeholder — persist to DB via settings service when ready
-    console.log('[settings] saveNotifications', input);
     return { success: true };
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     return { success: false, error: message };
   }
 }
+
+

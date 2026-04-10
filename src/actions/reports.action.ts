@@ -96,3 +96,4 @@ export async function generateReportAction(
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
   }
 }
+
