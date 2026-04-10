@@ -264,8 +264,9 @@ export function MobileProductFormDrawer({ open, onOpenChange, product, onSuccess
       toast.success(t('saveSuccess'));
       onOpenChange(false);
       onSuccess();
-    } catch {
+    } catch (err) {
       toast.error(tCommon('error'));
+      console.error('[handleSubmit]', err);
     } finally {
       setIsSubmitting(false);
     }
