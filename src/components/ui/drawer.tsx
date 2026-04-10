@@ -8,42 +8,60 @@ import { cn } from '@/lib/utils';
 // ---------------------------------------------------------------------------
 // Global drawer stack — tracks close callbacks in open order so the back
 // button always closes the most recently opened drawer only.
+//
+// Strategy: push ONE guard entry when the first drawer opens. On popstate,
+// close the top drawer and re-push the guard if more drawers remain.
+// When all drawers close normally (not via back), leave the guard entry —
+// the next back press will simply navigate back as usual. This avoids all
+// history.back() cleanup complexity.
 // ---------------------------------------------------------------------------
 const drawerStack: Array<() => void> = [];
+let guardActive = false;
+
+function handleGlobalPopState() {
+  if (drawerStack.length === 0) {
+    guardActive = false;
+    return;
+  }
+
+  // Close the top drawer
+  const close = drawerStack.pop()!;
+  close();
+
+  // Re-push the guard so the next back press is intercepted too
+  if (drawerStack.length > 0) {
+    window.history.pushState({ drawerGuard: true }, '');
+  } else {
+    guardActive = false;
+    window.removeEventListener('popstate', handleGlobalPopState);
+  }
+}
 
 function Drawer({ open, onOpenChange, ...props }: React.ComponentProps<typeof DrawerPrimitive.Root>) {
-  const closeRef = React.useRef<(() => void) | null>(null);
-
   React.useEffect(() => {
     if (!open) return;
 
-    // Register this drawer's close fn on the stack
     const close = () => onOpenChange?.(false);
-    closeRef.current = close;
     drawerStack.push(close);
 
-    // Push a dummy history entry for this drawer
-    window.history.pushState({ drawerOpen: true }, '');
-
-    function handlePopState() {
-      // Only the top of the stack should respond
-      const top = drawerStack[drawerStack.length - 1];
-      if (top === closeRef.current) {
-        drawerStack.pop();
-        closeRef.current = null;
-        top();
-      }
+    if (!guardActive) {
+      guardActive = true;
+      window.addEventListener('popstate', handleGlobalPopState);
+      window.history.pushState({ drawerGuard: true }, '');
     }
 
-    window.addEventListener('popstate', handlePopState);
     return () => {
-      window.removeEventListener('popstate', handlePopState);
-      // Drawer closed programmatically (not via back button) — remove from
-      // stack and clean up the dummy history entry we pushed
+      // Remove this drawer from the stack if it closed without back button
       const idx = drawerStack.indexOf(close);
       if (idx !== -1) {
         drawerStack.splice(idx, 1);
-        window.history.back();
+      }
+      // If stack is now empty, clean up listener
+      if (drawerStack.length === 0 && guardActive) {
+        guardActive = false;
+        window.removeEventListener('popstate', handleGlobalPopState);
+        // Don't call history.back() — leave the guard entry.
+        // The next back press will navigate normally, which is fine.
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps

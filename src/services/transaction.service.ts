@@ -1,5 +1,5 @@
 import 'server-only';
-import { unstable_cache } from 'next/cache';
+import { cache } from 'react';
 import { prisma } from '@/lib/db';
 import { requireNonEmpty } from './validation';
 import { resolveEffectivePrices } from './variant.service';
@@ -119,7 +119,7 @@ async function validateVariantBelongsToProduct(
 // Queries
 // ---------------------------------------------------------------------------
 
-export const getTransactions = unstable_cache(
+export const getTransactions = cache(
   async (options?: { productId?: number; limit?: number }): Promise<TransactionRecord[]> => {
     const rows = await prisma.stockTransaction.findMany({
       where: options?.productId ? { productId: options.productId } : undefined,
@@ -128,9 +128,7 @@ export const getTransactions = unstable_cache(
       take: options?.limit,
     });
     return rows.map(mapToTransactionRecord);
-  },
-  ['transactions'],
-  { tags: [TRANSACTION_CACHE_TAG] }
+  }
 );
 
 // ---------------------------------------------------------------------------

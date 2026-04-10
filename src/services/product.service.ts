@@ -1,6 +1,5 @@
 import 'server-only';
 import { cache } from 'react';
-import { unstable_cache } from 'next/cache';
 import { prisma } from '@/lib/db';
 import { requireNonEmpty, requirePositive } from './validation';
 import { resolveEffectivePrices } from './variant.service';
@@ -117,28 +116,24 @@ async function fetchVariantStockMapForProduct(productId: number): Promise<Map<nu
 // Queries
 // ---------------------------------------------------------------------------
 
-export const getAllProducts = unstable_cache(
-  async (): Promise<ProductSummary[]> => {
-    const [products, stockAggregates, variantStockAggregates] = await Promise.all([
-      prisma.product.findMany({ include: PRODUCT_INCLUDE, orderBy: { name: 'asc' } }),
-      prisma.stockTransaction.groupBy({ by: ['productId'], _sum: { quantity: true } }),
-      prisma.stockTransaction.groupBy({
-        by: ['variantId'],
-        where: { variantId: { not: null } },
-        _sum: { quantity: true },
-      }),
-    ]);
+export const getAllProducts = cache(async (): Promise<ProductSummary[]> => {
+  const [products, stockAggregates, variantStockAggregates] = await Promise.all([
+    prisma.product.findMany({ include: PRODUCT_INCLUDE, orderBy: { name: 'asc' } }),
+    prisma.stockTransaction.groupBy({ by: ['productId'], _sum: { quantity: true } }),
+    prisma.stockTransaction.groupBy({
+      by: ['variantId'],
+      where: { variantId: { not: null } },
+      _sum: { quantity: true },
+    }),
+  ]);
 
-    const stockMap = new Map<number, number>(
-      stockAggregates.map((row) => [row.productId, row._sum.quantity ?? 0])
-    );
-    const variantStockMap = buildVariantStockMap(variantStockAggregates);
+  const stockMap = new Map<number, number>(
+    stockAggregates.map((row) => [row.productId, row._sum.quantity ?? 0])
+  );
+  const variantStockMap = buildVariantStockMap(variantStockAggregates);
 
-    return products.map((p) => mapToProductSummary(p, stockMap.get(p.id) ?? 0, variantStockMap));
-  },
-  ['products'],
-  { tags: [PRODUCT_CACHE_TAG] }
-);
+  return products.map((p) => mapToProductSummary(p, stockMap.get(p.id) ?? 0, variantStockMap));
+});
 
 export const getProductById = cache(async (id: number): Promise<ProductSummary | null> => {
   const product = await prisma.product.findUnique({ where: { id }, include: PRODUCT_INCLUDE });
