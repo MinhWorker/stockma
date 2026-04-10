@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { FormField } from '@/components/forms/form-field';
 import { createCategoryAction, updateCategoryAction } from '@/actions/categories.action';
 import { getErrorKey } from '@/lib/error-message';
+import { useWithLoading } from '@/components/feedback/loading-overlay';
 import type { CategorySummary } from '@/services/types';
 
 interface Props {
@@ -33,6 +34,7 @@ export function CategoryFormDrawer({ open, onOpenChange, category, onSuccess }: 
   const [name, setName] = useState('');
   const [nameError, setNameError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const withLoading = useWithLoading();
 
   useEffect(() => {
     if (open) {
@@ -47,22 +49,21 @@ export function CategoryFormDrawer({ open, onOpenChange, category, onSuccess }: 
       return;
     }
     setIsSubmitting(true);
-    try {
-      const result = category
-        ? await updateCategoryAction(category.id, { name: name.trim() })
-        : await createCategoryAction({ name: name.trim() });
-      if (!result.success) {
-        toast.error(tCommon(getErrorKey(result.error)));
-        return;
+    await withLoading(async () => {
+      try {
+        const result = category
+          ? await updateCategoryAction(category.id, { name: name.trim() })
+          : await createCategoryAction({ name: name.trim() });
+        if (!result.success) { toast.error(tCommon(getErrorKey(result.error))); return; }
+        toast.success(t('saveSuccess'));
+        onOpenChange(false);
+        onSuccess();
+      } catch {
+        toast.error(tCommon('error'));
+      } finally {
+        setIsSubmitting(false);
       }
-      toast.success(t('saveSuccess'));
-      onOpenChange(false);
-      onSuccess();
-    } catch {
-      toast.error(tCommon('error'));
-    } finally {
-      setIsSubmitting(false);
-    }
+    });
   }
 
   return (
@@ -71,7 +72,7 @@ export function CategoryFormDrawer({ open, onOpenChange, category, onSuccess }: 
         <DrawerHeader>
           <DrawerTitle>{category ? t('editCategory') : t('addCategory')}</DrawerTitle>
         </DrawerHeader>
-        <div className="overflow-y-auto px-4 space-y-4 pb-2">
+        <div className="overflow-y-auto px-4 space-y-4 pb-2" inert={isSubmitting || undefined}>
           <FormField label={t('form.name')} required error={nameError} htmlFor={nameId}>
             <Input
               id={nameId}

@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { FormField } from '@/components/forms/form-field';
 import { createProviderAction, updateProviderAction } from '@/actions/providers.action';
 import { getErrorKey } from '@/lib/error-message';
+import { useWithLoading } from '@/components/feedback/loading-overlay';
 import type { ProviderSummary } from '@/services/types';
 
 interface Props {
@@ -33,6 +34,7 @@ export function ProviderFormDrawer({ open, onOpenChange, provider, onSuccess }: 
   const [name, setName] = useState('');
   const [nameError, setNameError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const withLoading = useWithLoading();
 
   useEffect(() => {
     if (open) {
@@ -47,22 +49,21 @@ export function ProviderFormDrawer({ open, onOpenChange, provider, onSuccess }: 
       return;
     }
     setIsSubmitting(true);
-    try {
-      const result = provider
-        ? await updateProviderAction(provider.id, { name: name.trim() })
-        : await createProviderAction({ name: name.trim() });
-      if (!result.success) {
-        toast.error(tCommon(getErrorKey(result.error)));
-        return;
+    await withLoading(async () => {
+      try {
+        const result = provider
+          ? await updateProviderAction(provider.id, { name: name.trim() })
+          : await createProviderAction({ name: name.trim() });
+        if (!result.success) { toast.error(tCommon(getErrorKey(result.error))); return; }
+        toast.success(t('saveSuccess'));
+        onOpenChange(false);
+        onSuccess();
+      } catch {
+        toast.error(tCommon('error'));
+      } finally {
+        setIsSubmitting(false);
       }
-      toast.success(t('saveSuccess'));
-      onOpenChange(false);
-      onSuccess();
-    } catch {
-      toast.error(tCommon('error'));
-    } finally {
-      setIsSubmitting(false);
-    }
+    });
   }
 
   return (
@@ -71,7 +72,7 @@ export function ProviderFormDrawer({ open, onOpenChange, provider, onSuccess }: 
         <DrawerHeader>
           <DrawerTitle>{provider ? t('editProvider') : t('addProvider')}</DrawerTitle>
         </DrawerHeader>
-        <div className="overflow-y-auto px-4 space-y-4 pb-2">
+        <div className="overflow-y-auto px-4 space-y-4 pb-2" inert={isSubmitting || undefined}>
           <FormField label={t('form.name')} required error={nameError} htmlFor={nameId}>
             <Input
               id={nameId}

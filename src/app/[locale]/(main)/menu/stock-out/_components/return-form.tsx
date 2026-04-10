@@ -21,6 +21,7 @@ import {
 import { getProductsAction } from '@/actions/products.action';
 import { createReturnAction } from '@/actions/return.action';
 import { getErrorKey } from '@/lib/error-message';
+import { useWithLoading } from '@/components/feedback/loading-overlay';
 import type { ProductSummary } from '@/services/types';
 
 export function ReturnForm() {
@@ -40,6 +41,7 @@ export function ReturnForm() {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const withLoading = useWithLoading();
   const [done, setDone] = useState(false);
 
   const [products, setProducts] = useState<ProductSummary[]>([]);
@@ -84,26 +86,25 @@ export function ReturnForm() {
     }
 
     setIsSubmitting(true);
-    try {
-      const result = await createReturnAction({
-        productId,
-        variantId,
-        returnQty: rQty,
-        replacementQty: repQty,
-        purchasePrice: purchasePrice ? Number(purchasePrice) : undefined,
-        note: note || undefined,
-      });
-      if (!result.success) {
-        toast.error(tCommon(getErrorKey(result.error)));
-        return;
+    await withLoading(async () => {
+      try {
+        const result = await createReturnAction({
+          productId,
+          variantId,
+          returnQty: rQty,
+          replacementQty: repQty,
+          purchasePrice: purchasePrice ? Number(purchasePrice) : undefined,
+          note: note || undefined,
+        });
+        if (!result.success) { toast.error(tCommon(getErrorKey(result.error))); return; }
+        toast.success('Ghi nhận đổi trả thành công');
+        setDone(true);
+      } catch {
+        toast.error(tCommon('error'));
+      } finally {
+        setIsSubmitting(false);
       }
-      toast.success('Ghi nhận đổi trả thành công');
-      setDone(true);
-    } catch {
-      toast.error(tCommon('error'));
-    } finally {
-      setIsSubmitting(false);
-    }
+    });
   }, [productId, variantId, returnQty, replacementQty, purchasePrice, note, tCommon]);
 
   function handleReset() {
@@ -132,7 +133,7 @@ export function ReturnForm() {
   }
 
   return (
-    <div className="space-y-4 px-4 py-4">
+    <div className="space-y-4 px-4 py-4" inert={isSubmitting || undefined}>
       {/* Product */}
       <FormField label="Sản phẩm" required error={errors.productId}>
         <ProductCombobox

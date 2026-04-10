@@ -35,6 +35,7 @@ import {
 } from '@/actions/products.action';
 import type { VariantPendingOp } from '@/actions/products.action';
 import { getErrorKey } from '@/lib/error-message';
+import { useWithLoading } from '@/components/feedback/loading-overlay';
 import type { ProductSummary, CategorySummary, ProviderSummary, InventorySummary, VariantSummary } from '@/services/types';
 
 // ---------------------------------------------------------------------------
@@ -125,6 +126,7 @@ export function MobileProductFormDrawer({ open, onOpenChange, product, onSuccess
   const [values, setValues] = useState<FormValues>(empty);
   const [errors, setErrors] = useState<Errors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const withLoading = useWithLoading();
   const [categories, setCategories] = useState<CategorySummary[]>([]);
   const [providers, setProviders] = useState<ProviderSummary[]>([]);
   const [inventories, setInventories] = useState<InventorySummary[]>([]);
@@ -222,54 +224,53 @@ export function MobileProductFormDrawer({ open, onOpenChange, product, onSuccess
     const e = validate();
     if (Object.keys(e).length) { setErrors(e); return; }
     setIsSubmitting(true);
-    try {
-      // 1. Save product fields
-      const productResult = product
-        ? await updateProductAction(product.id, {
-            name: values.name,
-            ...(hasVariants ? {} : { costPrice: values.costPrice, price: values.price }),
-            categoryId: values.categoryId,
-            providerId: values.providerId,
-            inventoryId: values.inventoryId,
-            shortDescription: values.description,
-            unit: values.unit || undefined,
-          })
-        : await createProductAction({
-            name: values.name,
-            costPrice: values.costPrice,
-            price: values.price,
-            categoryId: values.categoryId,
-            providerId: values.providerId,
-            inventoryId: values.inventoryId,
-            shortDescription: values.description,
-            unit: values.unit || undefined,
-          });
+    await withLoading(async () => {
+      try {
+        const productResult = product
+          ? await updateProductAction(product.id, {
+              name: values.name,
+              ...(hasVariants ? {} : { costPrice: values.costPrice, price: values.price }),
+              categoryId: values.categoryId,
+              providerId: values.providerId,
+              inventoryId: values.inventoryId,
+              shortDescription: values.description,
+              unit: values.unit || undefined,
+            })
+          : await createProductAction({
+              name: values.name,
+              costPrice: values.costPrice,
+              price: values.price,
+              categoryId: values.categoryId,
+              providerId: values.providerId,
+              inventoryId: values.inventoryId,
+              shortDescription: values.description,
+              unit: values.unit || undefined,
+            });
 
-      if (!productResult.success) {
-        toast.error(tCommon(getErrorKey(productResult.error)));
-        return;
-      }
-
-      // 2. Flush pending variant ops (only for existing products)
-      if (product && pendingOps.length > 0) {
-        // Remap temp create ops to use real productId
-        const ops = pendingOps.map((op) => op.type === 'create' ? { ...op, data: { ...op.data, productId: product.id } } : op);
-        const variantResult = await syncVariantsAction(product.id, values.name, ops);
-        if (!variantResult.success) {
-          toast.error(tCommon(getErrorKey(variantResult.error)));
+        if (!productResult.success) {
+          toast.error(tCommon(getErrorKey(productResult.error)));
           return;
         }
-      }
 
-      toast.success(t('saveSuccess'));
-      onOpenChange(false);
-      onSuccess();
-    } catch (err) {
-      toast.error(tCommon('error'));
-      console.error('[handleSubmit]', err);
-    } finally {
-      setIsSubmitting(false);
-    }
+        if (product && pendingOps.length > 0) {
+          const ops = pendingOps.map((op) => op.type === 'create' ? { ...op, data: { ...op.data, productId: product.id } } : op);
+          const variantResult = await syncVariantsAction(product.id, values.name, ops);
+          if (!variantResult.success) {
+            toast.error(tCommon(getErrorKey(variantResult.error)));
+            return;
+          }
+        }
+
+        toast.success(t('saveSuccess'));
+        onOpenChange(false);
+        onSuccess();
+      } catch (err) {
+        toast.error(tCommon('error'));
+        console.error('[handleSubmit]', err);
+      } finally {
+        setIsSubmitting(false);
+      }
+    });
   }
 
   // ---------------------------------------------------------------------------
@@ -371,7 +372,7 @@ export function MobileProductFormDrawer({ open, onOpenChange, product, onSuccess
             <DrawerTitle>{product ? t('editProduct') : t('addProduct')}</DrawerTitle>
           </DrawerHeader>
           <ScrollArea className="flex-1 overflow-y-auto">
-            <div className="px-4 space-y-4 py-2" inert={!ready || undefined}>
+            <div className="px-4 space-y-4 py-2" inert={(!ready || isSubmitting) || undefined}>
             <FormField label={t('form.name')} required error={errors.name} htmlFor={nameId}>
               <Input className='text-base' id={nameId} value={values.name} onChange={(e) => set('name', e.target.value)} placeholder={t('form.namePlaceholder')} aria-invalid={!!errors.name} onFocus={scrollOnFocus} />
             </FormField>
@@ -383,6 +384,7 @@ export function MobileProductFormDrawer({ open, onOpenChange, product, onSuccess
                 placeholder={t('form.categoryPlaceholder')}
                 title={t('form.category')}
                 aria-invalid={!!errors.categoryId}
+                disabled={isSubmitting}
               />
             </FormField>
             <FormField label={t('form.provider')} required error={errors.providerId}>
@@ -393,6 +395,7 @@ export function MobileProductFormDrawer({ open, onOpenChange, product, onSuccess
                 placeholder={t('form.providerPlaceholder')}
                 title={t('form.provider')}
                 aria-invalid={!!errors.providerId}
+                disabled={isSubmitting}
               />
             </FormField>
             <FormField label={t('form.inventory')} required error={errors.inventoryId}>
@@ -403,6 +406,7 @@ export function MobileProductFormDrawer({ open, onOpenChange, product, onSuccess
                 placeholder={t('form.inventoryPlaceholder')}
                 title={t('form.inventory')}
                 aria-invalid={!!errors.inventoryId}
+                disabled={isSubmitting}
               />
             </FormField>
             <div className="grid grid-cols-2 gap-3">

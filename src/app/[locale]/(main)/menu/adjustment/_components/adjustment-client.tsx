@@ -64,7 +64,7 @@ export function AdjustmentClient() {
   }
 
   return (
-    <div className="space-y-4 px-4 py-4">
+    <div className="space-y-4 px-4 py-4" inert={isSubmitting || undefined}>
       <p className="text-xs text-muted-foreground rounded-xl bg-muted px-3 py-2">
         Nhập số lượng dương để tăng tồn kho, số âm để giảm.
       </p>

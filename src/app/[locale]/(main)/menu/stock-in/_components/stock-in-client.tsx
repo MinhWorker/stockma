@@ -23,6 +23,7 @@ import { getProductsAction } from '@/actions/products.action';
 import { createTransactionAction } from '@/actions/inventory.action';
 import { useSession } from '@/lib/auth-client';
 import { getErrorKey } from '@/lib/error-message';
+import { useWithLoading } from '@/components/feedback/loading-overlay';
 import type { ProductSummary } from '@/services/types';
 
 export function StockInClient() {
@@ -42,6 +43,7 @@ export function StockInClient() {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const withLoading = useWithLoading();
   const [done, setDone] = useState(false);
 
   const [products, setProducts] = useState<ProductSummary[]>([]);
@@ -84,27 +86,26 @@ export function StockInClient() {
     }
 
     setIsSubmitting(true);
-    try {
-      const result = await createTransactionAction({
-        type: 'stock_in',
-        productId,
-        quantity,
-        note: note || undefined,
-        userId: session?.user?.id ?? '',
-        variantId,
-        purchasePrice: purchasePrice ? Number(purchasePrice) : undefined,
-      });
-      if (!result.success) {
-        toast.error(tCommon(getErrorKey(result.error)));
-        return;
+    await withLoading(async () => {
+      try {
+        const result = await createTransactionAction({
+          type: 'stock_in',
+          productId,
+          quantity,
+          note: note || undefined,
+          userId: session?.user?.id ?? '',
+          variantId,
+          purchasePrice: purchasePrice ? Number(purchasePrice) : undefined,
+        });
+        if (!result.success) { toast.error(tCommon(getErrorKey(result.error))); return; }
+        toast.success(t('submitSuccess'));
+        setDone(true);
+      } catch {
+        toast.error(tCommon('error'));
+      } finally {
+        setIsSubmitting(false);
       }
-      toast.success(t('submitSuccess'));
-      setDone(true);
-    } catch {
-      toast.error(tCommon('error'));
-    } finally {
-      setIsSubmitting(false);
-    }
+    });
   }, [productId, quantity, note, variantId, purchasePrice, hasVariants, session, t, tCommon]);
 
   function handleReset() {
@@ -144,7 +145,7 @@ export function StockInClient() {
   }
 
   return (
-    <div className="space-y-4 px-4 py-4">
+    <div className="space-y-4 px-4 py-4" inert={isSubmitting || undefined}>
       <FormField label={t('form.product')} required error={errors.productId}>
         <ProductCombobox
           products={products}

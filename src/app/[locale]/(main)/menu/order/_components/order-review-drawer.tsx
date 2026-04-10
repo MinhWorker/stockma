@@ -20,6 +20,7 @@ import { useOrder } from '../_context/order-context';
 import { createStockOutAction } from '@/actions/inventory.action';
 import { useSession } from '@/lib/auth-client';
 import { getErrorKey } from '@/lib/error-message';
+import { useWithLoading } from '@/components/feedback/loading-overlay';
 import { formatPrice, cn } from '@/lib/utils';
 import type { StockOutType } from '@/services/types';
 
@@ -32,6 +33,7 @@ export function OrderReviewDrawer() {
   const [, startTransition] = useTransition();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const withLoading = useWithLoading();
 
   const { items, global, reviewOpen } = state;
   const isDebt = global.stockOutType === 'retail' || global.stockOutType === 'wholesale';
@@ -53,32 +55,33 @@ export function OrderReviewDrawer() {
     const userId = session?.user?.id ?? '';
     let successCount = 0;
 
-    try {
-      for (const item of items) {
-        const effectivePrice = item.variant?.effectivePrice ?? item.product.price;
-        const result = await createStockOutAction({
-          productId: item.product.id,
-          variantId: item.variant?.id,
-          quantity: item.quantity,
-          stockOutType: global.stockOutType as StockOutType,
-          salePrice: item.salePrice ? Number(item.salePrice) : effectivePrice,
-          note: global.note || undefined,
-          debtorName: isDebt && global.debtorName ? global.debtorName : undefined,
-          paidAmount: isDebt && global.paidAmount ? Number(global.paidAmount) : undefined,
-          userId,
-        });
-        if (result.success) successCount++;
-        else toast.error(`${item.product.name}: ${tCommon(getErrorKey(result.error))}`);
+    await withLoading(async () => {
+      try {
+        for (const item of items) {
+          const effectivePrice = item.variant?.effectivePrice ?? item.product.price;
+          const result = await createStockOutAction({
+            productId: item.product.id,
+            variantId: item.variant?.id,
+            quantity: item.quantity,
+            stockOutType: global.stockOutType as StockOutType,
+            salePrice: item.salePrice ? Number(item.salePrice) : effectivePrice,
+            note: global.note || undefined,
+            debtorName: isDebt && global.debtorName ? global.debtorName : undefined,
+            paidAmount: isDebt && global.paidAmount ? Number(global.paidAmount) : undefined,
+            userId,
+          });
+          if (result.success) successCount++;
+          else toast.error(`${item.product.name}: ${tCommon(getErrorKey(result.error))}`);
+        }
+        if (successCount > 0) {
+          toast.success(t('successToast', { count: successCount }));
+          actions.reset();
+          startTransition(() => router.refresh());
+        }
+      } finally {
+        setIsSubmitting(false);
       }
-
-      if (successCount > 0) {
-        toast.success(t('successToast', { count: successCount }));
-        actions.reset();
-        startTransition(() => router.refresh());
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
+    });
   }
 
   return (
@@ -88,7 +91,7 @@ export function OrderReviewDrawer() {
           <DrawerTitle>{t('itemsTitle')} ({items.length})</DrawerTitle>
         </DrawerHeader>
 
-        <div className="overflow-y-auto px-4 space-y-4 pb-2">
+        <div className="overflow-y-auto px-4 space-y-4 pb-2" inert={isSubmitting || undefined}>
           {/* Global fields */}
           <div className="space-y-3">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('globalFields')}</p>

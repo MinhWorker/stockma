@@ -18,6 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { FormField } from '@/components/forms/form-field';
 import { createInventoryAction, updateInventoryAction } from '@/actions/inventory-setup.action';
 import { getErrorKey } from '@/lib/error-message';
+import { useWithLoading } from '@/components/feedback/loading-overlay';
 import type { InventorySummary } from '@/services/types';
 
 interface Props {
@@ -39,6 +40,7 @@ export function InventoryFormDrawer({ open, onOpenChange, inventory, onSuccess }
   const [description, setDescription] = useState('');
   const [nameError, setNameError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const withLoading = useWithLoading();
 
   useEffect(() => {
     if (open) {
@@ -51,20 +53,22 @@ export function InventoryFormDrawer({ open, onOpenChange, inventory, onSuccess }
   async function handleSubmit() {
     if (!name.trim()) { setNameError(tCommon('required')); return; }
     setIsSubmitting(true);
-    try {
-      const result = inventory
-        ? await updateInventoryAction(inventory.id, { name: name.trim(), description: description.trim() || undefined })
-        : await createInventoryAction({ name: name.trim(), description: description.trim() || undefined });
-      if (!result.success) { toast.error(tCommon(getErrorKey(result.error))); return; }
-      toast.success(t('saveSuccess'));
-      onSuccess();
-      onOpenChange(false);
-      startTransition(() => router.refresh());
-    } catch {
-      toast.error(tCommon('error'));
-    } finally {
-      setIsSubmitting(false);
-    }
+    await withLoading(async () => {
+      try {
+        const result = inventory
+          ? await updateInventoryAction(inventory.id, { name: name.trim(), description: description.trim() || undefined })
+          : await createInventoryAction({ name: name.trim(), description: description.trim() || undefined });
+        if (!result.success) { toast.error(tCommon(getErrorKey(result.error))); return; }
+        toast.success(t('saveSuccess'));
+        onSuccess();
+        onOpenChange(false);
+        startTransition(() => router.refresh());
+      } catch {
+        toast.error(tCommon('error'));
+      } finally {
+        setIsSubmitting(false);
+      }
+    });
   }
 
   return (
@@ -73,7 +77,7 @@ export function InventoryFormDrawer({ open, onOpenChange, inventory, onSuccess }
         <DrawerHeader>
           <DrawerTitle>{inventory ? t('editInventory') : t('addInventory')}</DrawerTitle>
         </DrawerHeader>
-        <div className="overflow-y-auto px-4 space-y-4 pb-2">
+        <div className="overflow-y-auto px-4 space-y-4 pb-2" inert={isSubmitting || undefined}>
           <FormField label={t('form.name')} required error={nameError} htmlFor={nameId}>
             <Input
               id={nameId}
