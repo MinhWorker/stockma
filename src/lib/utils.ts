@@ -57,8 +57,27 @@ export function formatDate(d: Date | string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Price formatting
+// Date parsing — canonical helpers for converting ISO date strings (YYYY-MM-DD)
+// to Date objects. Always append explicit time to avoid UTC-vs-local ambiguity:
+// new Date("2025-04-12") → UTC midnight (wrong in UTC+7)
+// new Date("2025-04-12T00:00:00") → local midnight (correct)
 // ---------------------------------------------------------------------------
+
+/**
+ * Parse a YYYY-MM-DD string as the start of that day in local time (00:00:00).
+ */
+export function parseDateStart(dateStr: string): Date {
+  return new Date(dateStr + 'T00:00:00');
+}
+
+/**
+ * Parse a YYYY-MM-DD string as the end of that day in local time (23:59:59).
+ */
+export function parseDateEnd(dateStr: string): Date {
+  return new Date(dateStr + 'T23:59:59');
+}
+
+
 
 /**
  * Format VND price: "1.234.567đ"

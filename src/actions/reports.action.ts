@@ -2,6 +2,7 @@
 
 import { getAllProducts } from '@/services/product.service';
 import { getTransactions } from '@/services/transaction.service';
+import { parseDateStart, parseDateEnd } from '@/lib/utils';
 
 export type ReportType = 'inventorySummary' | 'stockMovement' | 'lowStock' | 'valuation';
 
@@ -37,8 +38,8 @@ export async function generateReportAction(
     // async-parallel: fetch both at once
     const [products, transactions] = await Promise.all([getAllProducts(), getTransactions()]);
 
-    const from = input.dateFrom ? new Date(input.dateFrom).getTime() : null;
-    const to = input.dateTo ? new Date(input.dateTo + 'T23:59:59').getTime() : null;
+    const from = input.dateFrom ? parseDateStart(input.dateFrom).getTime() : null;
+    const to = input.dateTo ? parseDateEnd(input.dateTo).getTime() : null;
     const inRange = (d: Date | string) => {
       const t = new Date(d).getTime();
       return (!from || t >= from) && (!to || t <= to);

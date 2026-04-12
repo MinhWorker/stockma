@@ -93,6 +93,8 @@ export async function addDebtPayment(
   const result = await prisma.$transaction(async (tx) => {
     const debtGroup = await tx.debtGroup.findUniqueOrThrow({ where: { id: debtGroupId } });
     if (debtGroup.status !== 'open') throw new Error('ERR_DEBT_ALREADY_CLOSED');
+    const remaining = debtGroup.totalAmount - debtGroup.paidAmount;
+    if (amount > remaining) throw new Error('ERR_PAYMENT_EXCEEDS_REMAINING');
 
     await tx.debtPayment.create({ data: { debtGroupId, amount, note, userId } });
 

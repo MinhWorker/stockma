@@ -20,7 +20,6 @@ export default async function MobileDashboardPage({ searchParams }: Props) {
 
   return (
     <div className="space-y-0">
-      <h1 className="px-4 pt-1 pb-3 text-xl font-semibold">Tổng quan</h1>
       <Suspense fallback={<DashboardSkeleton />}>
         <DashboardData statsPromise={statsPromise} inventories={inventories} selectedInventoryId={inventoryId} />
       </Suspense>
@@ -51,13 +50,25 @@ function DashboardSkeleton() {
         ))}
       </div>
       {/* Stat cards */}
-      <div className="grid grid-cols-2 gap-3">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="rounded-2xl bg-muted/50 p-4 space-y-2">
-            <div className="h-2.5 w-16 rounded animate-shimmer" />
-            <div className="h-6 w-24 rounded animate-shimmer" />
-          </div>
-        ))}
+      <div className="space-y-3 px-4">
+        {/* Hero card skeleton */}
+        <div className="rounded-2xl bg-muted/50 p-4 space-y-2">
+          <div className="h-2.5 w-20 rounded animate-shimmer" />
+          <div className="h-7 w-32 rounded animate-shimmer" />
+        </div>
+        {/* Secondary grid skeleton */}
+        <div className="grid grid-cols-2 gap-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="rounded-2xl bg-muted/50 p-4 space-y-2">
+              <div className="h-2.5 w-16 rounded animate-shimmer" />
+              <div className="h-6 w-24 rounded animate-shimmer" />
+            </div>
+          ))}
+        </div>
+        <div className="rounded-2xl bg-muted/50 p-4 space-y-2">
+          <div className="h-2.5 w-16 rounded animate-shimmer" />
+          <div className="h-6 w-24 rounded animate-shimmer" />
+        </div>
       </div>
       {/* Chart skeleton */}
       <div className="rounded-2xl border border-border p-4 space-y-3">

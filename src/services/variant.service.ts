@@ -94,11 +94,10 @@ export async function getVariantById(variantId: number): Promise<VariantSummary 
 
 export async function createVariant(input: CreateVariantInput): Promise<VariantSummary> {
   requireNonEmpty(input.name, 'Variant name');
-  requirePositive(input.costPrice ?? 0, 'Variant cost price');
-  requirePositive(input.price ?? 0, 'Variant price');
   if (input.costPrice === undefined || input.costPrice === null) throw new Error('ERR_VARIANT_PRICE_REQUIRED');
   if (input.price === undefined || input.price === null) throw new Error('ERR_VARIANT_PRICE_REQUIRED');
-
+  requirePositive(input.costPrice, 'Variant cost price');
+  requirePositive(input.price, 'Variant price');
   if (input.price < input.costPrice) throw new Error('ERR_PRICE_BELOW_COST');
 
   try {
@@ -125,9 +124,13 @@ export async function updateVariant(id: number, input: UpdateVariantInput): Prom
   if (input.name !== undefined) requireNonEmpty(input.name, 'Variant name');
   if (input.costPrice !== undefined) requirePositive(input.costPrice, 'Variant cost price');
   if (input.price !== undefined) requirePositive(input.price, 'Variant price');
-  // Prices are required when provided (no longer optional)
-  if (input.costPrice !== null && input.costPrice !== undefined && input.price !== null && input.price !== undefined) {
-    if (input.price < input.costPrice) throw new Error('ERR_PRICE_BELOW_COST');
+
+  // Cross-check price >= costPrice, fetching the other side from DB when only one is provided
+  if (input.costPrice !== undefined || input.price !== undefined) {
+    const existing = await prisma.productVariant.findUniqueOrThrow({ where: { id }, select: { costPrice: true, price: true } });
+    const resolvedCost = input.costPrice ?? existing.costPrice ?? 0;
+    const resolvedPrice = input.price ?? existing.price ?? 0;
+    if (resolvedPrice < resolvedCost) throw new Error('ERR_PRICE_BELOW_COST');
   }
 
   try {

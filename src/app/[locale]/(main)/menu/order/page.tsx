@@ -13,7 +13,6 @@ export default async function OrderPage() {
 
   return (
     <div className="space-y-0">
-      <h1 className="px-4 pt-1 pb-3 text-xl font-semibold">{t('title')}</h1>
       <OrderProvider>
         <Suspense fallback={<CatalogSkeleton />}>
           <OrderCatalog products={available} />

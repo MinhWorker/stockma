@@ -1,6 +1,7 @@
 'use client';
 
 import { useTranslations } from 'next-intl';
+import { Plus } from 'lucide-react';
 import {
   Combobox,
   ComboboxInput,
@@ -9,6 +10,7 @@ import {
   ComboboxItem,
   ComboboxEmpty,
 } from '@/components/ui/combobox';
+import { Link } from '@/i18n/routing';
 import type { ProductSummary } from '@/services/types';
 
 interface ProductComboboxProps {
@@ -19,6 +21,8 @@ interface ProductComboboxProps {
   onSearchChange: (search: string) => void;
   error?: boolean;
   placeholder?: string;
+  /** When provided, shows an "Add new product" link at the bottom of the dropdown */
+  addNewHref?: string;
 }
 
 export function ProductCombobox({
@@ -29,6 +33,7 @@ export function ProductCombobox({
   onSearchChange,
   error,
   placeholder,
+  addNewHref,
 }: ProductComboboxProps) {
   const tCommon = useTranslations('common');
   const t = useTranslations('inventory');
@@ -69,6 +74,17 @@ export function ProductCombobox({
             </ComboboxItem>
           ))}
         </ComboboxList>
+        {addNewHref && (
+          <div className="border-t border-border px-2 py-2">
+            <Link
+              href={addNewHref as Parameters<typeof Link>[0]['href']}
+              className="flex items-center gap-1.5 w-full rounded-sm px-2 py-1.5 text-sm text-primary font-medium hover:bg-muted transition-colors"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              {t('form.addNewProduct')}
+            </Link>
+          </div>
+        )}
       </ComboboxContent>
     </Combobox>
   );

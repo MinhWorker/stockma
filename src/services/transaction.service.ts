@@ -142,6 +142,9 @@ export async function createTransaction(input: CreateTransactionInput): Promise<
   if (input.type === 'stock_out' && !input.stockOutType) throw new Error('ERR_STOCK_OUT_TYPE_REQUIRED');
   if (input.salePrice != null && input.salePrice <= 0) throw new Error('ERR_INVALID_SALE_PRICE');
   if (input.purchasePrice != null && input.purchasePrice <= 0) throw new Error('ERR_INVALID_PURCHASE_PRICE');
+  // Enforce quantity sign: stock_in must be positive, stock_out must be negative
+  if (input.type === 'stock_in' && input.quantity < 0) throw new Error('ERR_INVALID_QUANTITY');
+  if (input.type === 'stock_out' && input.quantity > 0) throw new Error('ERR_INVALID_QUANTITY');
 
   const result = await prisma.$transaction(async (tx) => {
     if (input.variantId) {
@@ -309,6 +312,16 @@ export async function createBatchTransactions(
     const created: TransactionRecord[] = [];
 
     for (const input of inputs) {
+      if (!input.quantity || input.quantity === 0) throw new Error('ERR_INVALID_QUANTITY');
+      if (input.type === 'stock_out' && !input.stockOutType) throw new Error('ERR_STOCK_OUT_TYPE_REQUIRED');
+      if (input.type === 'stock_in' && input.quantity < 0) throw new Error('ERR_INVALID_QUANTITY');
+      if (input.type === 'stock_out' && input.quantity > 0) throw new Error('ERR_INVALID_QUANTITY');
+
+      if (input.variantId) {
+        await validateVariantBelongsToProduct(tx, input.variantId, input.productId);
+      }
+      await ensureVariantProvidedIfRequired(tx, input.productId, input.variantId);
+
       const stockBefore = await getLatestStockSnapshot(tx, input.productId, input.variantId);
       const stockAfter = stockBefore + input.quantity;
       if (stockAfter < 0) throw new Error('ERR_INSUFFICIENT_STOCK');

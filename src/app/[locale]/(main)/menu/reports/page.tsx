@@ -19,7 +19,6 @@ export default async function ReportsPage({ searchParams }: Props) {
   return (
     <PageTransition>
       <div className="space-y-0">
-        <h1 className="px-4 pt-1 pb-3 text-xl font-semibold">{t('title')}</h1>
         <Suspense fallback={<ReportsHubSkeleton />}>
           <ReportsHubData
             inventoriesPromise={inventoriesPromise}

@@ -1,5 +1,6 @@
 import 'server-only';
 import { prisma } from '@/lib/db';
+import { parseDateStart, parseDateEnd } from '@/lib/utils';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -76,8 +77,8 @@ export interface DebtReportRow {
 function buildDateRangeFilter(dateFrom?: string, dateTo?: string) {
   if (!dateFrom && !dateTo) return undefined;
   return {
-    ...(dateFrom && { gte: new Date(dateFrom) }),
-    ...(dateTo && { lte: new Date(dateTo + 'T23:59:59') }),
+    ...(dateFrom && { gte: parseDateStart(dateFrom) }),
+    ...(dateTo && { lte: parseDateEnd(dateTo) }),
   };
 }
 

@@ -49,6 +49,9 @@ export async function getReturnTransactions(options?: {
 export async function createReturnTransaction(input: CreateReturnInput): Promise<ReturnRecord> {
   if (input.returnQty < 0 || input.replacementQty < 0) throw new Error('ERR_RETURN_QTY_INVALID');
   if (input.returnQty + input.replacementQty === 0) throw new Error('ERR_RETURN_QTY_INVALID');
+  if (input.purchasePrice !== undefined && input.purchasePrice !== null && input.purchasePrice <= 0) {
+    throw new Error('ERR_INVALID_PURCHASE_PRICE');
+  }
 
   const result = await prisma.$transaction(async (tx) => {
     if (input.variantId) {

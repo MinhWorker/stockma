@@ -50,7 +50,11 @@ export async function createTransactionAction(
       type: payload.type,
       productId: payload.productId,
       quantity:
-        payload.type === 'stock_out' ? -Math.abs(payload.quantity) : Math.abs(payload.quantity),
+        payload.type === 'stock_out'
+          ? -Math.abs(payload.quantity)
+          : payload.type === 'adjustment'
+            ? payload.quantity
+            : Math.abs(payload.quantity),
       note: payload.note,
       userId: payload.userId,
       variantId: payload.variantId,

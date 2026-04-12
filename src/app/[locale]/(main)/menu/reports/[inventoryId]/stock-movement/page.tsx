@@ -13,16 +13,19 @@ interface Props {
 }
 
 export default async function StockMovementPage({ params, searchParams }: Props) {
-  const { inventoryId } = await params;
+  const [{ inventoryId }, { from, to }] = await Promise.all([params, searchParams]);
   const t = await getTranslations('reports.stockMovement');
 
   return (
     <div className="space-y-0">
-      <h1 className="px-4 pt-1 pb-1 text-xl font-semibold">{t('title')}</h1>
       <InventoryBadge inventoryId={inventoryId} />
       <ReportFilters />
       <Suspense fallback={<TableSkeleton />}>
-        <StockMovementData inventoryId={inventoryId === 'all' ? undefined : Number(inventoryId)} dateFrom={(await searchParams).from} dateTo={(await searchParams).to} />
+        <StockMovementData
+          inventoryId={inventoryId === 'all' ? undefined : Number(inventoryId)}
+          dateFrom={from}
+          dateTo={to}
+        />
       </Suspense>
     </div>
   );
@@ -36,12 +39,23 @@ async function StockMovementData({ inventoryId, dateFrom, dateTo }: { inventoryI
   const tReports = await getTranslations('reports');
 
   if (rows.length === 0) {
-    return <p className="px-4 py-12 text-center text-sm text-muted-foreground">{tReports('noDataInRange')}</p>;
+    return (
+      <p className="px-4 py-12 text-center text-sm text-muted-foreground">
+        {dateFrom || dateTo ? tReports('noDataInRange') : tReports('noData')}
+      </p>
+    );
   }
 
   return (
     <div className="px-4 pb-8 pt-2 space-y-2">
-      <p className="text-xs text-muted-foreground">{t('countLabel', { count: rows.length })}</p>
+      <p className="text-xs text-muted-foreground">
+        {t('countLabel', { count: rows.length })}
+        {(dateFrom || dateTo) && (
+          <span className="ml-2 text-muted-foreground/60">
+            {dateFrom ?? '…'} → {dateTo ?? '…'}
+          </span>
+        )}
+      </p>
       <div className="rounded-2xl border border-border overflow-hidden divide-y divide-border/60 bg-card">
         {rows.map((row) => (
           <div key={row.productId} className="px-4 py-3 space-y-1.5">

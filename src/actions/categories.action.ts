@@ -4,6 +4,7 @@ import { revalidateTag } from 'next/cache';
 import { getAllCategories, createCategory, updateCategory, deleteCategory, getCategoryById } from '@/services/category.service';
 import { logActivity, ACTIVITY_CACHE_TAG } from '@/services/activity.service';
 import { withUser } from '@/lib/action';
+import type { CategorySummary } from '@/services/types';
 
 const CATEGORY_TAG = 'categories';
 
@@ -17,7 +18,7 @@ export async function getCategoriesAction() {
   return getAllCategories();
 }
 
-export const createCategoryAction = withUser(async (user, data: { name: string; state?: string }): Promise<ActionResult> => {
+export const createCategoryAction = withUser(async (user, data: { name: string; state?: string }): Promise<ActionResult<CategorySummary>> => {
   try {
     const category = await createCategory({ name: data.name, state: data.state ?? 'active' });
     await logActivity({
@@ -31,7 +32,7 @@ export const createCategoryAction = withUser(async (user, data: { name: string; 
     revalidateTag(CATEGORY_TAG, { expire: 0 });
     revalidateTag('products', { expire: 0 });
     revalidateTag(ACTIVITY_CACHE_TAG, { expire: 0 });
-    return { success: true };
+    return { success: true, data: category };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
   }

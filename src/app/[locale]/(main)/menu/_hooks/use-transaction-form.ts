@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useId, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { useRouter } from '@/i18n/routing';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
@@ -12,7 +12,7 @@ import type { ProductSummary } from '@/services/types';
 import type { TransactionFormValues, TransactionType } from '@/types/transaction';
 
 function emptyValues(type: TransactionType): TransactionFormValues {
-  return { type, productId: 0, quantity: 1, note: '' };
+  return { type, productId: 0, quantity: type === 'adjustment' ? 0 : 1, note: '' };
 }
 
 export function useTransactionForm(defaultType: TransactionType) {
@@ -25,6 +25,8 @@ export function useTransactionForm(defaultType: TransactionType) {
   const noteId = useId();
 
   const [values, setValues] = useState<TransactionFormValues>(() => emptyValues(defaultType));
+  const valuesRef = useRef(values);
+  valuesRef.current = values;
   const [errors, setErrors] = useState<Partial<Record<keyof TransactionFormValues, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [done, setDone] = useState(false);
@@ -63,29 +65,32 @@ export function useTransactionForm(defaultType: TransactionType) {
     ? products.filter((p) => p.name.toLowerCase().includes(productSearch.toLowerCase()))
     : products;
 
-  const handleSubmit = useCallback(async () => {
-    // Read latest values via functional setState to avoid stale closure
-    let snapshot: TransactionFormValues | null = null;
-    setValues((prev) => {
-      snapshot = prev;
-      return prev;
-    });
-
-    const current = snapshot as unknown as TransactionFormValues;
+  const validate = useCallback(() => {
+    const current = valuesRef.current;
     const e: Partial<Record<keyof TransactionFormValues, string>> = {};
     if (!current.productId) e.productId = tCommon('required');
-    if (!current.quantity || current.quantity < 1) e.quantity = tCommon('required');
-    // Require variant selection when product has variants
+    if (current.type === 'adjustment') {
+      if (current.quantity === 0) e.quantity = tCommon('required');
+      else {
+        const prod = products.find((p) => p.id === current.productId);
+        const currentStock = current.variantId
+          ? (prod?.variants?.find((v) => v.id === current.variantId)?.stockQty ?? 0)
+          : (prod?.stockQty ?? 0);
+        if (currentStock + current.quantity < 0) e.quantity = tCommon('errInsufficientStock');
+      }
+    } else {
+      if (!current.quantity || current.quantity < 1) e.quantity = tCommon('required');
+    }
     const product = products.find((p) => p.id === current.productId);
     if ((product?.variants?.length ?? 0) > 0 && !current.variantId) {
       e.variantId = tCommon('required');
     }
+    if (Object.keys(e).length) setErrors(e);
+    return Object.keys(e).length === 0;
+  }, [products, tCommon]);
 
-    if (Object.keys(e).length) {
-      setErrors(e);
-      return;
-    }
-
+  const submitConfirmed = useCallback(async () => {
+    const current = valuesRef.current;
     setIsSubmitting(true);
     try {
       const result = await createTransactionAction({
@@ -108,6 +113,11 @@ export function useTransactionForm(defaultType: TransactionType) {
       setIsSubmitting(false);
     }
   }, [t, tCommon, session]);
+
+  const handleSubmit = useCallback(async () => {
+    if (!validate()) return;
+    await submitConfirmed();
+  }, [validate, submitConfirmed]);
 
   const handleReset = useCallback(() => {
     setValues(emptyValues(defaultType));
@@ -138,6 +148,8 @@ export function useTransactionForm(defaultType: TransactionType) {
     selectedVariant,
     set,
     handleSubmit,
+    validate,
+    submitConfirmed,
     handleReset,
     handleClose,
     quantityId,

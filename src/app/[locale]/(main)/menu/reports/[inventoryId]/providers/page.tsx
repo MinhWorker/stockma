@@ -13,15 +13,14 @@ interface Props {
 }
 
 export default async function ProvidersReportPage({ params, searchParams }: Props) {
-  const { inventoryId } = await params;
+  const [{ inventoryId }, { from, to }] = await Promise.all([params, searchParams]);
   const t = await getTranslations('reports.providers');
   return (
     <div className="space-y-0">
-      <h1 className="px-4 pt-1 pb-1 text-xl font-semibold">{t('title')}</h1>
       <InventoryBadge inventoryId={inventoryId} />
       <ReportFilters />
       <Suspense fallback={<TableSkeleton />}>
-        <ProvidersData inventoryId={inventoryId === 'all' ? undefined : Number(inventoryId)} dateFrom={(await searchParams).from} dateTo={(await searchParams).to} />
+        <ProvidersData inventoryId={inventoryId === 'all' ? undefined : Number(inventoryId)} dateFrom={from} dateTo={to} />
       </Suspense>
     </div>
   );

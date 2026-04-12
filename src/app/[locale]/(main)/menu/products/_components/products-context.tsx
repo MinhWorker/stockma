@@ -1,11 +1,12 @@
 'use client';
 
-import { createContext, use, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, use, useCallback, useMemo, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useDebouncedUrlParam } from '@/hooks/use-debounced-url-param';
 import { useRouter, usePathname } from '@/i18n/routing';
 import { normalizeSearchText } from '@/lib/normalize-search';
 import type { ProductSummary, ProductStatus } from '@/services/types';
+import { deleteProductAction } from '@/actions/products.action';
 
 type StatusFilter = 'all' | ProductStatus;
 
@@ -15,8 +16,8 @@ interface ProductsState {
   statusFilter: StatusFilter;
   selectedProduct: ProductSummary | null;
   detailOpen: boolean;
-  formOpen: boolean;
-  editingProduct: ProductSummary | undefined;
+  deleteConfirmOpen: boolean;
+  isDeleting: boolean;
 }
 
 interface ProductsActions {
@@ -27,7 +28,9 @@ interface ProductsActions {
   closeDetail: () => void;
   openAdd: () => void;
   openEdit: (p: ProductSummary) => void;
-  closeForm: () => void;
+  openDeleteConfirm: () => void;
+  closeDeleteConfirm: () => void;
+  confirmDelete: (onSuccess: (id: number) => void) => Promise<{ success: boolean; error?: string } | undefined>;
 }
 
 interface ProductsContextValue {
@@ -45,10 +48,9 @@ export function useProducts() {
 
 interface Props {
   children: ReactNode;
-  openAddForm?: boolean;
 }
 
-export function ProductsProvider({ children, openAddForm }: Props) {
+export function ProductsProvider({ children }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -62,19 +64,12 @@ export function ProductsProvider({ children, openAddForm }: Props) {
 
   const [selectedProduct, setSelectedProduct] = useState<ProductSummary | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
-  const [formOpen, setFormOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<ProductSummary | undefined>();
-
-  useEffect(() => {
-    if (!openAddForm) return;
-    const id = setTimeout(() => setFormOpen(true), 420);
-    return () => clearTimeout(id);
-  }, [openAddForm]);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const setStatusFilter = useCallback(
     (v: string) => {
       const params = new URLSearchParams(window.location.search);
-      params.delete('action');
       if (v === 'all') params.delete('status');
       else params.set('status', v);
       const qs = params.toString();
@@ -89,7 +84,6 @@ export function ProductsProvider({ children, openAddForm }: Props) {
     const params = new URLSearchParams(window.location.search);
     params.delete('q');
     params.delete('status');
-    params.delete('action');
     const qs = params.toString();
     router.replace(`${pathname}${qs ? `?${qs}` : ''}` as Parameters<typeof router.replace>[0], {
       scroll: false,
@@ -103,22 +97,29 @@ export function ProductsProvider({ children, openAddForm }: Props) {
   }, []);
   const closeDetail = useCallback(() => setDetailOpen(false), []);
   const openAdd = useCallback(() => {
-    setEditingProduct(undefined);
-    setFormOpen(true);
-  }, []);
+    router.push('/menu/products/new' as Parameters<typeof router.push>[0]);
+  }, [router]);
   const openEdit = useCallback((p: ProductSummary) => {
-    setEditingProduct(p);
-    setFormOpen(true);
-  }, []);
-  const closeForm = useCallback(() => {
-    setFormOpen(false);
-    const params = new URLSearchParams(window.location.search);
-    if (params.has('action')) {
-      params.delete('action');
-      const qs = params.toString();
-      router.replace(`${pathname}${qs ? `?${qs}` : ''}` as Parameters<typeof router.replace>[0], { scroll: false });
+    router.push(`/menu/products/${p.id}/edit` as Parameters<typeof router.push>[0]);
+  }, [router]);
+
+  const openDeleteConfirm = useCallback(() => setDeleteConfirmOpen(true), []);
+  const closeDeleteConfirm = useCallback(() => setDeleteConfirmOpen(false), []);
+  const confirmDelete = useCallback(async (onSuccess: (id: number) => void) => {
+    if (!selectedProduct) return;
+    setIsDeleting(true);
+    try {
+      const result = await deleteProductAction(selectedProduct.id);
+      if (result.success) {
+        onSuccess(selectedProduct.id);
+        setDeleteConfirmOpen(false);
+        setDetailOpen(false);
+      }
+      return result;
+    } finally {
+      setIsDeleting(false);
     }
-  }, [router, pathname]);
+  }, [selectedProduct]);
 
   const contextValue = useMemo<ProductsContextValue>(() => ({
     state: {
@@ -127,8 +128,8 @@ export function ProductsProvider({ children, openAddForm }: Props) {
       statusFilter,
       selectedProduct,
       detailOpen,
-      formOpen,
-      editingProduct,
+      deleteConfirmOpen,
+      isDeleting,
     },
     actions: {
       setInputValue,
@@ -138,10 +139,13 @@ export function ProductsProvider({ children, openAddForm }: Props) {
       closeDetail,
       openAdd,
       openEdit,
-      closeForm,
+      openDeleteConfirm,
+      closeDeleteConfirm,
+      confirmDelete,
     },
-  }), [inputValue, search, statusFilter, selectedProduct, detailOpen, formOpen, editingProduct,
-      setInputValue, setStatusFilter, clearFilters, openDetail, closeDetail, openAdd, openEdit, closeForm]);
+  }), [inputValue, search, statusFilter, selectedProduct, detailOpen, deleteConfirmOpen, isDeleting,
+      setInputValue, setStatusFilter, clearFilters, openDetail, closeDetail, openAdd, openEdit,
+      openDeleteConfirm, closeDeleteConfirm, confirmDelete]);
 
   return (
     <ProductsContext value={contextValue}>

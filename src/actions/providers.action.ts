@@ -4,6 +4,7 @@ import { revalidateTag } from 'next/cache';
 import { getAllProviders, createProvider, updateProvider, deleteProvider, getProviderById } from '@/services/provider.service';
 import { logActivity, ACTIVITY_CACHE_TAG } from '@/services/activity.service';
 import { withUser } from '@/lib/action';
+import type { ProviderSummary } from '@/services/types';
 
 const PROVIDER_TAG = 'providers';
 
@@ -17,7 +18,7 @@ export async function getProvidersAction() {
   return getAllProviders();
 }
 
-export const createProviderAction = withUser(async (user, data: { name: string }): Promise<ActionResult> => {
+export const createProviderAction = withUser(async (user, data: { name: string }): Promise<ActionResult<ProviderSummary>> => {
   try {
     const provider = await createProvider(data);
     await logActivity({
@@ -30,7 +31,7 @@ export const createProviderAction = withUser(async (user, data: { name: string }
     });
     revalidateTag(PROVIDER_TAG, { expire: 0 });
     revalidateTag(ACTIVITY_CACHE_TAG, { expire: 0 });
-    return { success: true };
+    return { success: true, data: provider };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
   }

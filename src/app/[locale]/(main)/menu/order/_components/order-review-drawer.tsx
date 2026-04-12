@@ -11,6 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { PriceInput } from '@/components/forms/price-input';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -33,10 +34,22 @@ export function OrderReviewDrawer() {
   const [, startTransition] = useTransition();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isDebt, setIsDebt] = useState(false);
   const withLoading = useWithLoading();
 
   const { items, global, reviewOpen } = state;
-  const isDebt = global.stockOutType === 'retail' || global.stockOutType === 'wholesale';
+  const canDebt = global.stockOutType === 'retail' || global.stockOutType === 'wholesale';
+
+  // Reset debt toggle when switching to transfer
+  function handleTypeChange(v: StockOutType) {
+    actions.setGlobal('stockOutType', v);
+    setErrors((e) => ({ ...e, stockOutType: '' }));
+    if (v === 'transfer') {
+      setIsDebt(false);
+      actions.setGlobal('debtorName', '');
+      actions.setGlobal('paidAmount', '');
+    }
+  }
 
   function validate() {
     const e: Record<string, string> = {};
@@ -66,8 +79,8 @@ export function OrderReviewDrawer() {
             stockOutType: global.stockOutType as StockOutType,
             salePrice: item.salePrice ? Number(item.salePrice) : effectivePrice,
             note: global.note || undefined,
-            debtorName: isDebt && global.debtorName ? global.debtorName : undefined,
-            paidAmount: isDebt && global.paidAmount ? Number(global.paidAmount) : undefined,
+            debtorName: isDebt && canDebt && global.debtorName ? global.debtorName : undefined,
+            paidAmount: isDebt && canDebt && global.paidAmount ? Number(global.paidAmount) : undefined,
             userId,
           });
           if (result.success) successCount++;
@@ -76,6 +89,7 @@ export function OrderReviewDrawer() {
         if (successCount > 0) {
           toast.success(t('successToast', { count: successCount }));
           actions.reset();
+          setIsDebt(false);
           startTransition(() => router.refresh());
         }
       } finally {
@@ -94,11 +108,10 @@ export function OrderReviewDrawer() {
         <div className="overflow-y-auto px-4 space-y-4 pb-2" inert={isSubmitting || undefined}>
           {/* Global fields */}
           <div className="space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('globalFields')}</p>
-
+            {/* Stock-out type */}
             <div className="space-y-1">
-              <p className="text-sm font-medium">{t('stockOutType')}</p>
-              <Select value={global.stockOutType} onValueChange={(v) => { actions.setGlobal('stockOutType', v as StockOutType); setErrors((e) => ({ ...e, stockOutType: '' })); }}>
+              <p className="text-sm font-medium">{t('stockOutType')} <span className="text-destructive">*</span></p>
+              <Select value={global.stockOutType} onValueChange={(v) => handleTypeChange(v as StockOutType)}>
                 <SelectTrigger className={cn('w-full', errors.stockOutType && 'border-destructive')}>
                   <SelectValue placeholder={t('stockOutTypePlaceholder')} />
                 </SelectTrigger>
@@ -111,22 +124,56 @@ export function OrderReviewDrawer() {
               {errors.stockOutType && <p className="text-xs text-destructive">{errors.stockOutType}</p>}
             </div>
 
-            {isDebt && (
-              <div className="grid grid-cols-2 gap-3">
+            {/* Debt toggle — only for retail/wholesale */}
+            {canDebt && (
+              <label className="flex items-center gap-2.5 cursor-pointer select-none py-0.5">
+                <Checkbox
+                  checked={isDebt}
+                  onCheckedChange={(v) => {
+                    setIsDebt(!!v);
+                    if (!v) {
+                      actions.setGlobal('debtorName', '');
+                      actions.setGlobal('paidAmount', '');
+                    }
+                  }}
+                />
+                <span className="text-sm font-medium">{t('isDebt')}</span>
+              </label>
+            )}
+
+            {/* Debt fields — only when checkbox is checked */}
+            {isDebt && canDebt && (
+              <div className="grid grid-cols-2 gap-3 rounded-xl bg-muted/50 border border-border p-3">
                 <div className="space-y-1">
-                  <p className="text-sm font-medium">{t('debtorName')}</p>
-                  <Input value={global.debtorName} onChange={(e) => actions.setGlobal('debtorName', e.target.value)} placeholder={t('debtorNamePlaceholder')} />
+                  <p className="text-xs text-muted-foreground font-medium">{t('debtorName')}</p>
+                  <Input
+                    value={global.debtorName}
+                    onChange={(e) => actions.setGlobal('debtorName', e.target.value)}
+                    placeholder={t('debtorNamePlaceholder')}
+                    className="h-8 text-sm"
+                  />
                 </div>
                 <div className="space-y-1">
-                  <p className="text-sm font-medium">{t('paidAmount')}</p>
-                  <PriceInput value={global.paidAmount} onChange={(v) => actions.setGlobal('paidAmount', String(v || ''))} placeholder="0" />
+                  <p className="text-xs text-muted-foreground font-medium">{t('paidAmount')}</p>
+                  <PriceInput
+                    value={global.paidAmount}
+                    onChange={(v) => actions.setGlobal('paidAmount', String(v || ''))}
+                    placeholder="0"
+                    className="h-8 text-sm"
+                  />
                 </div>
               </div>
             )}
 
+            {/* Note */}
             <div className="space-y-1">
               <p className="text-sm font-medium">{t('note')}</p>
-              <Textarea value={global.note} onChange={(e) => actions.setGlobal('note', e.target.value)} placeholder={t('notePlaceholder')} rows={2} />
+              <Textarea
+                value={global.note}
+                onChange={(e) => actions.setGlobal('note', e.target.value)}
+                placeholder={t('notePlaceholder')}
+                rows={2}
+              />
             </div>
           </div>
 
@@ -138,7 +185,6 @@ export function OrderReviewDrawer() {
               const effectivePrice = item.variant?.effectivePrice ?? item.product.price;
               return (
                 <div key={item.key} className="rounded-xl border border-border bg-card p-3 space-y-3">
-                  {/* Header */}
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate">{item.product.name}</p>
@@ -147,12 +193,14 @@ export function OrderReviewDrawer() {
                       )}
                       <p className="text-xs text-muted-foreground">{formatPrice(effectivePrice)}</p>
                     </div>
-                    <button onClick={() => actions.removeItem(item.key)} className="shrink-0 text-muted-foreground hover:text-destructive transition-colors p-1">
+                    <button
+                      onClick={() => actions.removeItem(item.key)}
+                      className="shrink-0 text-muted-foreground hover:text-destructive transition-colors p-1"
+                    >
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
 
-                  {/* Qty + price row */}
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
                       <p className="text-xs text-muted-foreground">{t('qty')}</p>
@@ -186,7 +234,11 @@ export function OrderReviewDrawer() {
           <Button variant="outline" className="flex-1" onClick={actions.closeReview} disabled={isSubmitting}>
             {tCommon('cancel')}
           </Button>
-          <Button className="flex-1" onClick={handleSubmit} disabled={isSubmitting || items.length === 0}>
+          <Button
+            className="flex-1"
+            onClick={handleSubmit}
+            disabled={isSubmitting || items.length === 0}
+          >
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {isSubmitting ? tCommon('submitting') : t('confirmBtn', { count: items.length })}
           </Button>

@@ -5,38 +5,18 @@ import { MobileProductsClient } from './_components/mobile-products-client';
 
 export const dynamic = 'force-dynamic';
 
-export default async function MobileProductsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ action?: string }>;
-}) {
+export default async function MobileProductsPage() {
   const t = await getTranslations('products');
-  const productsPromise = getAllProducts();
+  const products = await getAllProducts();
 
   return (
     <div className="space-y-0">
-      <h1 className="px-4 pt-1 pb-3 text-xl font-semibold">{t('title')}</h1>
       <Suspense fallback={<ProductsSkeleton />}>
-        <ProductsData
-          productsPromise={productsPromise}
-          searchParamsPromise={searchParams}
-        />
+        <MobileProductsClient initialData={products} />
       </Suspense>
     </div>
   );
 }
-
-async function ProductsData({
-  productsPromise,
-  searchParamsPromise,
-}: {
-  productsPromise: ReturnType<typeof getAllProducts>;
-  searchParamsPromise: Promise<{ action?: string }>;
-}) {
-  const [products, { action }] = await Promise.all([productsPromise, searchParamsPromise]);
-  return <MobileProductsClient initialData={products} openAddForm={action === 'add'} />;
-}
-
 function ProductsSkeleton() {
   return (
     <div className="space-y-px">

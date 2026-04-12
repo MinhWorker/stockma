@@ -49,7 +49,7 @@ export default function RootLayoutClient({ children }: { children: ReactNode }) 
       attribute="class"
       defaultTheme="system"
       enableSystem
-      scriptProps={{ suppressHydrationWarning: true }}
+      disableTransitionOnChange
     >
       <ThemeCookieSync />
       <KeyboardHeightFix />

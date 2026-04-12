@@ -30,7 +30,7 @@ export async function getProductsAction() {
   return getAllProducts();
 }
 
-export const createProductAction = withUser(async (user, input: CreateProductInput): Promise<ActionResult> => {
+export const createProductAction = withUser(async (user, input: CreateProductInput): Promise<ActionResult<number>> => {
   try {
     const product = await createProduct(input);
     await logActivity({
@@ -44,7 +44,7 @@ export const createProductAction = withUser(async (user, input: CreateProductInp
     });
     revalidateTag(PRODUCT_CACHE_TAG, { expire: 0 });
     revalidateTag(ACTIVITY_CACHE_TAG, { expire: 0 });
-    return { success: true };
+    return { success: true, data: product.id };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
   }

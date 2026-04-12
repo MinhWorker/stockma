@@ -1,15 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
-import { useRouter } from '@/i18n/routing';
+import { useCallback, useMemo, useState } from 'react';
 import { Package } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
 import { MobileSearchBar } from '@/components/forms/mobile-search-bar';
 import { normalizeSearchText } from '@/lib/normalize-search';
+import { getErrorKey } from '@/lib/error-message';
 import type { ProductSummary, ProductStatus } from '@/services/types';
 import { MobileProductCard } from './mobile-product-card';
 import { ProductDetailDrawer } from './product-detail-drawer';
-import { MobileProductFormDrawer } from './mobile-product-form-drawer';
 import { Fab } from '../../inventory/_components/fab';
 import { ProductsProvider, useProducts } from './products-context';
 
@@ -17,34 +17,35 @@ type StatusFilter = 'all' | ProductStatus;
 
 interface Props {
   initialData: ProductSummary[];
-  openAddForm?: boolean;
 }
 
-export function MobileProductsClient({ initialData, openAddForm }: Props) {
+export function MobileProductsClient({ initialData }: Props) {
   const [data, setData] = useState<ProductSummary[]>(initialData);
 
-  // Sync when RSC re-renders with fresh data after router.refresh()
-  useEffect(() => {
-    setData(initialData);
-  }, [initialData]);
-
-  const router = useRouter();
-  const [, startTransition] = useTransition();
-  const refresh = useCallback(() => {
-    startTransition(() => router.refresh());
-  }, [router]);
+  const removeProduct = useCallback((id: number) => {
+    setData((prev) => prev.filter((p) => p.id !== id));
+  }, []);
 
   return (
-    <ProductsProvider openAddForm={openAddForm}>
-      <ProductsShell data={data} onRefresh={refresh} />
+    <ProductsProvider>
+      <ProductsShell data={data} onProductDeleted={removeProduct} />
     </ProductsProvider>
   );
 }
 
-function ProductsShell({ data, onRefresh }: { data: ProductSummary[]; onRefresh: () => void }) {
+function ProductsShell({ data, onProductDeleted }: { data: ProductSummary[]; onProductDeleted: (id: number) => void }) {
   const t = useTranslations('products');
   const tCommon = useTranslations('common');
   const { state, actions } = useProducts();
+
+  const handleDeleteConfirm = useCallback(async () => {
+    const result = await actions.confirmDelete(onProductDeleted);
+    if (result && !result.success) {
+      toast.error(tCommon(getErrorKey(result.error)));
+    } else if (result?.success) {
+      toast.success(t('deleteSuccess'));
+    }
+  }, [actions, onProductDeleted, t, tCommon]);
 
   const STATUS_TABS: { value: StatusFilter; label: string }[] = [
     { value: 'all', label: t('statusAll') },
@@ -63,11 +64,6 @@ function ProductsShell({ data, onRefresh }: { data: ProductSummary[]; onRefresh:
   const hasFilters = state.search !== '' || state.statusFilter !== 'all';
 
   const handleDetailClose = useCallback((open: boolean) => { if (!open) actions.closeDetail(); }, [actions]);
-  const handleFormClose = useCallback((open: boolean) => { if (!open) actions.closeForm(); }, [actions]);
-  const handleFormSuccess = useCallback(() => {
-    actions.closeForm();
-    onRefresh();
-  }, [actions, onRefresh]);
 
   return (
     <>
@@ -132,13 +128,11 @@ function ProductsShell({ data, onRefresh }: { data: ProductSummary[]; onRefresh:
         open={state.detailOpen}
         onOpenChange={handleDetailClose}
         onEdit={actions.openEdit}
-      />
-
-      <MobileProductFormDrawer
-        open={state.formOpen}
-        onOpenChange={handleFormClose}
-        product={state.editingProduct}
-        onSuccess={handleFormSuccess}
+        deleteConfirmOpen={state.deleteConfirmOpen}
+        isDeleting={state.isDeleting}
+        onDeleteRequest={actions.openDeleteConfirm}
+        onDeleteConfirm={handleDeleteConfirm}
+        onDeleteCancel={actions.closeDeleteConfirm}
       />
     </>
   );

@@ -1,7 +1,7 @@
 import 'server-only';
 import { cache } from 'react';
 import { prisma } from '@/lib/db';
-import { requireNonEmpty, requirePositive } from './validation';
+import { requireNonEmpty, requirePositive, requireNonNegative } from './validation';
 import { resolveEffectivePrices } from './variant.service';
 import { fetchProductStockQuantity } from './stock.helpers';
 import type {
@@ -184,36 +184,50 @@ export const getLowStockProducts = cache(async (): Promise<ProductSummary[]> => 
 
 export async function createProduct(input: CreateProductInput): Promise<ProductSummary> {
   requireNonEmpty(input.name, 'Product name');
-  requirePositive(input.costPrice, 'Cost price');
-  requirePositive(input.price, 'Retail price');
+  requireNonNegative(input.costPrice, 'Cost price');
+  requireNonNegative(input.price, 'Retail price');
   if (input.price < input.costPrice) throw new Error('ERR_PRICE_BELOW_COST');
 
-  const product = await prisma.product.create({
-    data: {
-      name: input.name,
-      shortDescription: input.shortDescription,
-      description: input.description,
-      imageUrl: input.imageUrl,
-      brand: input.brand,
-      costPrice: input.costPrice,
-      price: input.price,
-      unit: input.unit,
-      categoryId: input.categoryId,
-      providerId: input.providerId,
-      inventoryId: input.inventoryId,
-    },
-    include: PRODUCT_INCLUDE,
-  });
-
-  return mapToProductSummary(product, 0, new Map());
+  try {
+    const product = await prisma.product.create({
+      data: {
+        name: input.name,
+        shortDescription: input.shortDescription,
+        description: input.description,
+        imageUrl: input.imageUrl,
+        brand: input.brand,
+        costPrice: input.costPrice,
+        price: input.price,
+        unit: input.unit,
+        categoryId: input.categoryId,
+        providerId: input.providerId,
+        inventoryId: input.inventoryId,
+      },
+      include: PRODUCT_INCLUDE,
+    });
+    return mapToProductSummary(product, 0, new Map());
+  } catch (err) {
+    if (err instanceof Error && (err as { code?: string }).code === 'P2002') {
+      throw new Error('ERR_DUPLICATE_NAME');
+    }
+    throw err;
+  }
 }
 
 export async function updateProduct(id: number, input: UpdateProductInput): Promise<ProductSummary> {
   if (input.name !== undefined) requireNonEmpty(input.name, 'Product name');
-  if (input.costPrice !== undefined) requirePositive(input.costPrice, 'Cost price');
-  if (input.price !== undefined) requirePositive(input.price, 'Retail price');
-  if (input.price !== undefined && input.costPrice !== undefined && input.price < input.costPrice) {
-    throw new Error('ERR_PRICE_BELOW_COST');
+  if (input.costPrice !== undefined) requireNonNegative(input.costPrice, 'Cost price');
+  if (input.price !== undefined) requireNonNegative(input.price, 'Retail price');
+
+  // Cross-check price >= costPrice, fetching the other side from DB when only one is provided
+  if (input.costPrice !== undefined || input.price !== undefined) {
+    const existing = await prisma.product.findUniqueOrThrow({ where: { id }, select: { costPrice: true, price: true } });
+    const resolvedCost = input.costPrice ?? existing.costPrice;
+    const resolvedPrice = input.price ?? existing.price;
+    // Only enforce when both are non-zero (skip for variant-mode products with placeholder 0s)
+    if (resolvedCost > 0 && resolvedPrice > 0 && resolvedPrice < resolvedCost) {
+      throw new Error('ERR_PRICE_BELOW_COST');
+    }
   }
 
   const product = await prisma.product.update({
@@ -244,5 +258,8 @@ export async function updateProduct(id: number, input: UpdateProductInput): Prom
 export async function deleteProduct(id: number): Promise<void> {
   const transactionCount = await prisma.stockTransaction.count({ where: { productId: id } });
   if (transactionCount > 0) throw new Error('ERR_HAS_TRANSACTIONS');
-  await prisma.product.delete({ where: { id } });
+  await prisma.$transaction([
+    prisma.productVariant.deleteMany({ where: { productId: id } }),
+    prisma.product.delete({ where: { id } }),
+  ]);
 }

@@ -17,7 +17,6 @@ export default async function MobileSettingsPage() {
 
   return (
     <div className="space-y-6 pb-6">
-      <h1 className="px-4 pt-1 pb-3 text-xl font-semibold">{t('title')}</h1>
       <Suspense fallback={<InventorySkeleton />}>
         <InventoryData inventoriesPromise={inventoriesPromise} />
       </Suspense>

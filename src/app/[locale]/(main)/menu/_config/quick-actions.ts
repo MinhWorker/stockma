@@ -71,9 +71,8 @@ export const ACTION_GROUPS: ActionGroup[] = [
         id: 'add-product',
         labelKey: 'addProduct',
         descriptionKey: 'addProductDesc',
-        href: '/menu/products',
+        href: '/menu/products/new',
         color: 'bg-indigo-500',
-        intent: 'add',
       },
       {
         id: 'categories',

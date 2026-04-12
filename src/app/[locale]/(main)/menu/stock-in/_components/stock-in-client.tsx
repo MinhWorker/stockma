@@ -154,6 +154,7 @@ export function StockInClient() {
           onProductChange={handleProductChange}
           onSearchChange={(s) => { setProductSearch(s); if (!s) handleProductChange(0); }}
           error={!!errors.productId}
+          addNewHref="/menu/products/new?back=/menu/stock-in"
         />
         {selectedProduct && (
           <p className="text-xs text-muted-foreground mt-1">

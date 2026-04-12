@@ -10,7 +10,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
         <Suspense fallback={<div className="min-h-[56px] border-b border-border" />}>
           <MainHeader />
         </Suspense>
-        <main className="flex-1 overflow-y-auto pb-24" style={{ viewTransitionName: 'main-content' }}>{children}</main>
+        <main className="flex-1 overflow-y-auto pb-24 pt-3" style={{ viewTransitionName: 'main-content' }}>{children}</main>
         <BottomNav />
       </div>
     </LoadingOverlayProvider>
