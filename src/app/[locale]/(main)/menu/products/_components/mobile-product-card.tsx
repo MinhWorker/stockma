@@ -34,7 +34,9 @@ export function MobileProductCard({ product: p, onClick }: Props) {
 
       {/* Price + stock */}
       <div className="flex shrink-0 flex-col items-end gap-0.5">
-        <span className="text-sm font-semibold tabular-nums">{formatPrice(p.price)}</span>
+        {p.variants.length === 0 && (
+          <span className="text-sm font-semibold tabular-nums">{formatPrice(p.price)}</span>
+        )}
         <span className={cn(
           'text-[10px] tabular-nums font-medium',
           isOutOfStock ? 'text-destructive' : 'text-muted-foreground'

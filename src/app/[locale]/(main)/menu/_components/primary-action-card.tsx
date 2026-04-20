@@ -3,7 +3,7 @@
 import { usePathname } from '@/i18n/routing';
 import { LocaleLink } from '@/components/locale-link';
 import { cn } from '@/lib/utils';
-import { ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
+import { PackagePlus, PackageMinus } from 'lucide-react';
 
 interface PrimaryActionCardProps {
   href?: string;
@@ -15,14 +15,26 @@ interface PrimaryActionCardProps {
 }
 
 const STYLES = {
-  inbound:  { card: 'bg-emerald-50 border-emerald-100 hover:bg-emerald-100/70', icon: 'bg-emerald-500', text: 'text-emerald-900', sub: 'text-emerald-700/80', badge: 'bg-emerald-500 text-white' },
-  outbound: { card: 'bg-rose-50 border-rose-100 hover:bg-rose-100/70',          icon: 'bg-rose-500',    text: 'text-rose-900',    sub: 'text-rose-700/80',    badge: 'bg-rose-500 text-white'    },
+  inbound:  { 
+    card: 'bg-gradient-to-br from-emerald-50/80 to-white border-emerald-200/60 shadow-md shadow-emerald-500/10 hover:from-emerald-100/60 hover:to-emerald-50/40 hover:shadow-lg hover:shadow-emerald-500/15', 
+    icon: 'bg-emerald-500 shadow-sm shadow-emerald-500/40', 
+    text: 'text-emerald-900', 
+    sub: 'text-emerald-700/80', 
+    badge: 'bg-emerald-500 text-white shadow-sm shadow-emerald-500/40' 
+  },
+  outbound: { 
+    card: 'bg-gradient-to-br from-rose-50/80 to-white border-rose-200/60 shadow-md shadow-rose-500/10 hover:from-rose-100/60 hover:to-rose-50/40 hover:shadow-lg hover:shadow-rose-500/15', 
+    icon: 'bg-rose-500 shadow-sm shadow-rose-500/40', 
+    text: 'text-rose-900', 
+    sub: 'text-rose-700/80', 
+    badge: 'bg-rose-500 text-white shadow-sm shadow-rose-500/40'    
+  },
 };
 
 const BADGE = { inbound: '+', outbound: '−' };
 
 export function PrimaryActionCard({ href, intent, label, description, variant, onClick }: PrimaryActionCardProps) {
-  const Icon = variant === 'inbound' ? ArrowDownToLine : ArrowUpFromLine;
+  const Icon = variant === 'inbound' ? PackagePlus : PackageMinus;
   const pathname = usePathname();
   const styles = STYLES[variant];
 

@@ -111,8 +111,12 @@ export function ProductDetailDrawer({
 
                 {/* Pricing + provider */}
                 <div className="divide-y divide-border/50">
-                  <InfoRow label={t('form.costPrice')}>{formatPrice(p.costPrice)}</InfoRow>
-                  <InfoRow label={t('form.retailPrice')}>{formatPrice(p.price)}</InfoRow>
+                  {p.variants.length === 0 && (
+                    <>
+                      <InfoRow label={t('form.costPrice')}>{formatPrice(p.costPrice)}</InfoRow>
+                      <InfoRow label={t('form.retailPrice')}>{formatPrice(p.price)}</InfoRow>
+                    </>
+                  )}
                   {p.providerName && (
                     <InfoRow label={t('providerLabel')}>{p.providerName}</InfoRow>
                   )}

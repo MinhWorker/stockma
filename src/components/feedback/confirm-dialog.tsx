@@ -17,9 +17,11 @@ interface ConfirmDialogProps {
   title: string;
   description: string;
   onConfirm: () => void;
+  onCancel?: () => void;
   isLoading?: boolean;
   confirmLabel?: string;
   cancelLabel?: string;
+  variant?: 'default' | 'destructive';
 }
 
 export function ConfirmDialog({
@@ -28,10 +30,17 @@ export function ConfirmDialog({
   title,
   description,
   onConfirm,
+  onCancel,
   isLoading = false,
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
+  variant = 'destructive',
 }: ConfirmDialogProps) {
+  const handleCancel = () => {
+    onCancel?.();
+    onOpenChange(false);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent showCloseButton={false}>
@@ -39,11 +48,11 @@ export function ConfirmDialog({
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="outline" onClick={handleCancel} disabled={isLoading}>
             {cancelLabel}
           </Button>
-          <Button variant="destructive" onClick={onConfirm} disabled={isLoading}>
+          <Button variant={variant} onClick={onConfirm} disabled={isLoading}>
             {isLoading && <Loader2 className="mr-2 size-4 animate-spin" />}
             {confirmLabel}
           </Button>

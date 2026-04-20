@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useId, useState } from 'react';
-import { CheckCircle2, Loader2 } from 'lucide-react';
+import { useCallback, useId, useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
@@ -10,19 +10,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { FormField } from '@/components/forms/form-field';
 import { PriceInput } from '@/components/forms/price-input';
 import { ProductCombobox } from '@/components/forms/product-combobox';
-import {
-  Combobox,
-  ComboboxInput,
-  ComboboxContent,
-  ComboboxList,
-  ComboboxItem,
-  ComboboxEmpty,
-} from '@/components/ui/combobox';
-import { getProductsAction } from '@/actions/products.action';
 import { createReturnAction } from '@/actions/return.action';
 import { getErrorKey } from '@/lib/error-message';
 import { useWithLoading } from '@/components/feedback/loading-overlay';
-import type { ProductSummary } from '@/services/types';
+import { useInventoryProductState } from '../../_hooks/use-inventory-product-state';
+import { VariantChipSelector } from '../../_components/variant-chip-selector';
+import { TransactionDoneState } from '../../_components/transaction-done-state';
 
 export function ReturnForm() {
   const tCommon = useTranslations('common');
@@ -32,8 +25,13 @@ export function ReturnForm() {
   const purchasePriceId = useId();
   const noteId = useId();
 
-  const [productId, setProductId] = useState<number>(0);
-  const [variantId, setVariantId] = useState<number | undefined>(undefined);
+  const productState = useInventoryProductState();
+  const {
+    productId, setProductId, variantId, setVariantId, products,
+    productSearch, setProductSearch, selectedProduct, hasVariants,
+    resetProduct,
+  } = productState;
+
   const [returnQty, setReturnQty] = useState('');
   const [replacementQty, setReplacementQty] = useState('');
   const [purchasePrice, setPurchasePrice] = useState('');
@@ -44,29 +42,10 @@ export function ReturnForm() {
   const withLoading = useWithLoading();
   const [done, setDone] = useState(false);
 
-  const [products, setProducts] = useState<ProductSummary[]>([]);
-  const [productSearch, setProductSearch] = useState('');
-  const [variantSearch, setVariantSearch] = useState('');
-
-  useEffect(() => {
-    getProductsAction().then(setProducts);
-  }, []);
-
-  const selectedProduct = products.find((p) => p.id === productId);
-  const hasVariants = (selectedProduct?.variants?.length ?? 0) > 0;
-  const selectedVariant = selectedProduct?.variants?.find((v) => v.id === variantId);
-
-  const filteredVariants = variantSearch
-    ? (selectedProduct?.variants ?? []).filter((v) =>
-        v.name.toLowerCase().includes(variantSearch.toLowerCase())
-      )
-    : (selectedProduct?.variants ?? []);
-
   function handleProductChange(v: number) {
     setProductId(v);
     setProductSearch('');
     setVariantId(undefined);
-    setVariantSearch('');
     setErrors((prev) => ({ ...prev, productId: '' }));
   }
 
@@ -105,30 +84,26 @@ export function ReturnForm() {
         setIsSubmitting(false);
       }
     });
-  }, [productId, variantId, returnQty, replacementQty, purchasePrice, note, tCommon]);
+  }, [productId, variantId, returnQty, replacementQty, purchasePrice, note, tCommon, withLoading]);
 
   function handleReset() {
-    setProductId(0);
-    setVariantId(undefined);
+    resetProduct();
     setReturnQty('');
     setReplacementQty('');
     setPurchasePrice('');
     setNote('');
-    setProductSearch('');
-    setVariantSearch('');
     setErrors({});
     setDone(false);
   }
 
   if (done) {
     return (
-      <div className="flex flex-col items-center justify-center gap-6 py-16 px-4 text-center">
-        <CheckCircle2 className="h-16 w-16 text-emerald-500" strokeWidth={1.5} />
-        <div className="space-y-1">
-          <p className="text-lg font-semibold">Ghi nhận đổi trả thành công</p>
-        </div>
-        <Button onClick={handleReset}>Đổi trả mới</Button>
-      </div>
+      <TransactionDoneState
+        title="Ghi nhận đổi trả thành công"
+        subtitle=""
+        onReset={handleReset}
+        onClose={() => window.history.back()}
+      />
     );
   }
 
@@ -148,39 +123,17 @@ export function ReturnForm() {
 
       {/* Variant — only when product has variants */}
       {hasVariants && (
-        <FormField label="Phân loại">
-          <Combobox
-            value={variantId ?? null}
-            onValueChange={(v) => {
-              setVariantId(v as number | undefined);
-              setVariantSearch('');
-            }}
-          >
-            <ComboboxInput
-              placeholder="Chọn phân loại (tùy chọn)..."
-              value={variantId && !variantSearch
-                ? (selectedVariant?.name ?? '')
-                : variantSearch}
-              onChange={(e) => {
-                setVariantSearch(e.target.value);
-                if (!e.target.value) setVariantId(undefined);
-              }}
-            />
-            <ComboboxContent>
-              <ComboboxList>
-                <ComboboxEmpty>{tCommon('noResults')}</ComboboxEmpty>
-                {filteredVariants.map((v) => (
-                  <ComboboxItem key={v.id} value={v.id}>
-                    <span className="flex-1 truncate">{v.name}</span>
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      {v.effectivePrice.toLocaleString()}
-                    </span>
-                  </ComboboxItem>
-                ))}
-              </ComboboxList>
-            </ComboboxContent>
-          </Combobox>
-        </FormField>
+        <VariantChipSelector
+          label="Phân loại"
+          variants={selectedProduct?.variants ?? []}
+          selectedId={variantId}
+          onSelect={(v) => {
+            setVariantId(v);
+            setErrors((prev) => ({ ...prev, variantId: '' }));
+          }}
+          error={errors.variantId}
+          getPrice={(v) => v.effectivePrice}
+        />
       )}
 
       {/* Return qty */}

@@ -1,12 +1,13 @@
 'use client';
 
-import { useId } from 'react';
+import { useId, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { FormField } from '@/components/forms/form-field';
 import { MobileSelectSheet } from '@/components/forms/mobile-select-sheet';
 import { useScrollIntoViewOnFocus } from '@/hooks/use-scroll-into-view-on-focus';
+import { normalizeSearchText } from '@/lib/normalize-search';
 import type { CategorySummary, ProviderSummary, InventorySummary } from '@/services/types';
 import type { ProductFormValues, ProductFormErrors } from './product-form-types';
 
@@ -44,6 +45,41 @@ export function ProductBasicFields({
   const nameId = useId();
   const descId = useId();
 
+  // Smart category sorting: push relevant categories to top based on product name
+  const sortedCategoryOptions = useMemo(() => {
+    const normalizedName = normalizeSearchText(values.name);
+    if (!normalizedName) {
+      return categories.map((c) => ({ value: String(c.id), label: c.name }));
+    }
+
+    const scored = categories.map((c) => {
+      const normalizedCat = normalizeSearchText(c.name);
+      let score = 0;
+
+      // Exact match (highest priority)
+      if (normalizedCat === normalizedName) {
+        score = 100;
+      }
+      // Product name contains category name (e.g. "Samsung Galaxy S22" in category "Samsung")
+      else if (normalizedName.includes(normalizedCat)) {
+        score = 80;
+      }
+      // Category name contains product name (less common but possible)
+      else if (normalizedCat.includes(normalizedName)) {
+        score = 60;
+      }
+
+      return { ...c, score };
+    });
+
+    return scored
+      .sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return a.name.localeCompare(b.name);
+      })
+      .map((c) => ({ value: String(c.id), label: c.name }));
+  }, [categories, values.name]);
+
   return (
     <div className="space-y-4">
       <FormField label={t('form.name')} required error={errors.name} htmlFor={nameId}>
@@ -63,7 +99,7 @@ export function ProductBasicFields({
         <MobileSelectSheet
           value={values.categoryId ? String(values.categoryId) : ''}
           onChange={(v) => onChange('categoryId', v ? Number(v) : 0)}
-          options={categories.map((c) => ({ value: String(c.id), label: c.name }))}
+          options={sortedCategoryOptions}
           placeholder={t('form.categoryPlaceholder')}
           title={t('form.category')}
           aria-invalid={!!errors.categoryId}

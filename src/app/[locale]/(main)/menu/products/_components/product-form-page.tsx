@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useRouter, usePathname } from '@/i18n/routing';
 import { toast } from 'sonner';
 import { useTranslations } from 'next-intl';
@@ -28,6 +28,9 @@ import { ProductFormHeader } from './product-form-header';
 import { ProductBasicFields } from './product-basic-fields';
 import { ProductPricingFields } from './product-pricing-fields';
 import { ProductVariantsSection } from './product-variants-section';
+import { ConfirmDialog } from '@/components/feedback/confirm-dialog';
+import { PageTransition } from '@/components/page-transition';
+import { useNavigationGuard } from '@/components/navigation-guard';
 
 // ---------------------------------------------------------------------------
 // Draft persistence (survives navigation to settings and back)
@@ -96,6 +99,7 @@ export function ProductFormPage({ product }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const withLoading = useWithLoading();
+  const { setDirty } = useNavigationGuard();
 
   // Form state
   const [values, setValues] = useState<ProductFormValues>(
@@ -103,6 +107,7 @@ export function ProductFormPage({ product }: Props) {
   );
   const [errors, setErrors] = useState<ProductFormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   // Reference data
   const [categories, setCategories] = useState<CategorySummary[]>([]);
@@ -118,6 +123,30 @@ export function ProductFormPage({ product }: Props) {
 
   const isEditing = !!product;
   const variantMode = isEditing ? variantDrafts.length > 0 || variantModeEnabled : variantModeEnabled;
+
+  // Dirty state tracking
+  const isDirty = useMemo(() => {
+    const baseValues = product ? valuesFromProduct(product) : emptyValues();
+    const baseVariants = product?.variants.map(draftFromVariant) ?? [];
+    
+    // Compare basic values (ignore empty strings vs nulls if needed, but here they are consistent)
+    const valuesChanged = JSON.stringify(values) !== JSON.stringify(baseValues);
+    
+    // Compare variants (ignore temporary IDs by comparing only relevant fields)
+    const variantsChanged = variantDrafts.length !== baseVariants.length || 
+      variantDrafts.some((d, i) => {
+        const b = baseVariants[i];
+        if (!b) return true;
+        return d.name !== b.name || d.costPrice !== b.costPrice || d.price !== b.price || d.unit !== b.unit;
+      });
+    
+    return valuesChanged || variantsChanged;
+  }, [values, variantDrafts, product]);
+
+  useEffect(() => {
+    setDirty(isDirty);
+    return () => setDirty(false);
+  }, [isDirty, setDirty]);
 
   // Restore draft if user navigated back from settings
   const { save: saveDraft } = useFormDraft<FormDraft>(
@@ -168,6 +197,7 @@ export function ProductFormPage({ product }: Props) {
 
   function handleGoToSettings() {
     saveDraft({ values, variantDrafts, variantModeEnabled });
+    setDirty(false);
     router.push(
       `/menu/settings?back=${encodeURIComponent(pathname)}` as Parameters<typeof router.push>[0]
     );
@@ -253,7 +283,7 @@ export function ProductFormPage({ product }: Props) {
   // Submit
   // ---------------------------------------------------------------------------
 
-  async function handleSubmit() {
+  function handleSaveClick() {
     const fieldErrors = validate();
     if (Object.keys(fieldErrors).length) {
       setErrors(fieldErrors);
@@ -265,6 +295,11 @@ export function ProductFormPage({ product }: Props) {
     }
     if (variantMode && !validateVariantDrafts()) return;
 
+    setConfirmOpen(true);
+  }
+
+  async function onConfirmSave() {
+    setConfirmOpen(false);
     setIsSubmitting(true);
     await withLoading(async () => {
       try {
@@ -313,6 +348,7 @@ export function ProductFormPage({ product }: Props) {
         }
 
         toast.success(t('saveSuccess'));
+        setDirty(false);
         if (isEditing) {
           router.back();
         } else {
@@ -371,13 +407,13 @@ export function ProductFormPage({ product }: Props) {
   // ---------------------------------------------------------------------------
 
   return (
-    <>
-      {/* Sticky sub-header — sticks within the scrolling <main> */}
-      <div className="sticky top-0 z-20 bg-background border-b border-border">
+    <PageTransition>
+      {/* Sub-header */}
+      <div className="bg-background border-b border-border">
         <ProductFormHeader
           isEditing={isEditing}
           isSubmitting={isSubmitting}
-          onSave={handleSubmit}
+          onSave={handleSaveClick}
         />
       </div>
 
@@ -421,6 +457,17 @@ export function ProductFormPage({ product }: Props) {
           onChangeRow={handleChangeVariantRow}
         />
       </div>
-    </>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={t('saveConfirmTitle')}
+        description={t('saveConfirmDesc')}
+        onConfirm={onConfirmSave}
+        isLoading={isSubmitting}
+        confirmLabel={tCommon('confirm')}
+        cancelLabel={tCommon('cancel')}
+      />
+    </PageTransition>
   );
 }

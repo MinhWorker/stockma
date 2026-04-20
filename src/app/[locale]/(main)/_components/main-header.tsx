@@ -2,13 +2,13 @@
 
 import { usePathname, useRouter } from '@/i18n/routing';
 import { useTranslations } from 'next-intl';
-import { ThemeToggle } from '@/components/theme-toggle';
-import { LangSwitchButton } from '@/components/lang-switch-button';
+import { HeaderActionsMenu } from './header-actions-menu';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
 import logo from '../../../../../public/web-app-manifest-192x192.png';
 import { useSearchParams } from 'next/navigation';
+import { useNavigationGuard } from '@/components/navigation-guard';
 
 const MENU_ROOT = '/menu';
 
@@ -104,14 +104,17 @@ export function MainHeader() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pageTitle = usePageTitle();
+  const { requestLeave } = useNavigationGuard();
 
   const isRoot = pathname === MENU_ROOT;
   const backTo = searchParams.get('back');
 
   function handleBack() {
-    const opts = { transitionTypes: ['nav-back'] };
-    if (backTo) router.push(backTo as Parameters<typeof router.push>[0], opts);
-    else router.push(MENU_ROOT, opts);
+    requestLeave(() => {
+      const opts = { transitionTypes: ['nav-back'] };
+      if (backTo) router.push(backTo as Parameters<typeof router.push>[0], opts);
+      else router.push(MENU_ROOT, opts);
+    });
   }
 
   return (
@@ -140,8 +143,7 @@ export function MainHeader() {
 
       {/* Right: controls */}
       <div className="flex items-center gap-2 shrink-0">
-        <LangSwitchButton className="h-8 text-xs px-2" />
-        <ThemeToggle />
+        <HeaderActionsMenu />
       </div>
     </header>
   );

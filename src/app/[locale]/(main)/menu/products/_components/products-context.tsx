@@ -97,11 +97,11 @@ export function ProductsProvider({ children }: Props) {
   }, []);
   const closeDetail = useCallback(() => setDetailOpen(false), []);
   const openAdd = useCallback(() => {
-    router.push('/menu/products/new' as Parameters<typeof router.push>[0]);
-  }, [router]);
+    router.push(`/menu/products/new?back=${encodeURIComponent(pathname)}` as Parameters<typeof router.push>[0]);
+  }, [router, pathname]);
   const openEdit = useCallback((p: ProductSummary) => {
-    router.push(`/menu/products/${p.id}/edit` as Parameters<typeof router.push>[0]);
-  }, [router]);
+    router.push(`/menu/products/${p.id}/edit?back=${encodeURIComponent(pathname)}` as Parameters<typeof router.push>[0]);
+  }, [router, pathname]);
 
   const openDeleteConfirm = useCallback(() => setDeleteConfirmOpen(true), []);
   const closeDeleteConfirm = useCallback(() => setDeleteConfirmOpen(false), []);

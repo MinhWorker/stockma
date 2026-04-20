@@ -1,8 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useId, useState } from 'react';
+import { useCallback, useId, useState } from 'react';
 import { useRouter } from '@/i18n/routing';
-import { CheckCircle2, Loader2, Plus, Trash2 } from 'lucide-react';
+import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
@@ -26,12 +26,14 @@ import {
   ComboboxItem,
   ComboboxEmpty,
 } from '@/components/ui/combobox';
-import { getProductsAction } from '@/actions/products.action';
 import { createStockOutAction } from '@/actions/inventory.action';
 import { useSession } from '@/lib/auth-client';
 import { getErrorKey } from '@/lib/error-message';
 import { useWithLoading } from '@/components/feedback/loading-overlay';
-import type { ProductSummary, StockOutType, GiftItemInput } from '@/services/types';
+import type { StockOutType, GiftItemInput } from '@/services/types';
+import { useInventoryProductState } from '../../_hooks/use-inventory-product-state';
+import { VariantChipSelector } from '../../_components/variant-chip-selector';
+import { TransactionDoneState } from '../../_components/transaction-done-state';
 
 interface GiftItemState {
   id: string; // local key
@@ -62,12 +64,16 @@ export function StockOutClient() {
   const quantityId = useId();
   const noteId = useId();
 
-  // Core fields
-  const [productId, setProductId] = useState<number>(0);
+  const productState = useInventoryProductState();
+  const {
+    productId, setProductId, variantId, setVariantId, products,
+    productSearch, setProductSearch, selectedProduct, hasVariants,
+    selectedVariant, resetProduct,
+  } = productState;
+
   const [quantity, setQuantity] = useState<number>(1);
   const [note, setNote] = useState('');
   const [stockOutType, setStockOutType] = useState<StockOutType | ''>('');
-  const [variantId, setVariantId] = useState<number | undefined>(undefined);
   const [salePrice, setSalePrice] = useState('');
 
   // Gift items
@@ -82,32 +88,13 @@ export function StockOutClient() {
   const withLoading = useWithLoading();
   const [done, setDone] = useState(false);
 
-  const [products, setProducts] = useState<ProductSummary[]>([]);
-  const [productSearch, setProductSearch] = useState('');
-  const [variantSearch, setVariantSearch] = useState('');
-
-  useEffect(() => {
-    getProductsAction().then(setProducts);
-  }, []);
-
-  const selectedProduct = products.find((p) => p.id === productId);
-  const hasVariants = (selectedProduct?.variants?.length ?? 0) > 0;
-  const selectedVariant = selectedProduct?.variants?.find((v) => v.id === variantId);
   const effectivePrice = selectedVariant?.effectivePrice ?? selectedProduct?.price;
-
   const isRetailOrWholesale = stockOutType === 'retail' || stockOutType === 'wholesale';
-
-  const filteredVariants = variantSearch
-    ? (selectedProduct?.variants ?? []).filter((v) =>
-        v.name.toLowerCase().includes(variantSearch.toLowerCase())
-      )
-    : (selectedProduct?.variants ?? []);
 
   function handleProductChange(v: number) {
     setProductId(v);
     setProductSearch('');
     setVariantId(undefined);
-    setVariantSearch('');
     setSalePrice('');
     setErrors((prev) => ({ ...prev, productId: '' }));
   }
@@ -172,21 +159,18 @@ export function StockOutClient() {
     });
   }, [
     productId, quantity, note, stockOutType, variantId, salePrice,
-    gifts, debtorName, paidAmount, isRetailOrWholesale, session, t, tCommon,
+    gifts, debtorName, paidAmount, isRetailOrWholesale, session, t, tCommon, hasVariants, withLoading,
   ]);
 
   function handleReset() {
-    setProductId(0);
+    resetProduct();
     setQuantity(1);
     setNote('');
     setStockOutType('');
-    setVariantId(undefined);
     setSalePrice('');
     setGifts([]);
     setDebtorName('');
     setPaidAmount('');
-    setProductSearch('');
-    setVariantSearch('');
     setErrors({});
     setDone(false);
   }
@@ -199,19 +183,12 @@ export function StockOutClient() {
 
   if (done) {
     return (
-      <div className="flex flex-col items-center justify-center gap-6 py-16 px-4 text-center">
-        <CheckCircle2 className="h-16 w-16 text-emerald-500" strokeWidth={1.5} />
-        <div className="space-y-1">
-          <p className="text-lg font-semibold">{t('submitSuccess')}</p>
-          <p className="text-sm text-muted-foreground">{t('tabs.stockOut')}</p>
-        </div>
-        <div className="flex gap-3">
-          <Button variant="outline" onClick={handleClose}>
-            {tCommon('close')}
-          </Button>
-          <Button onClick={handleReset}>{t('newTransaction')}</Button>
-        </div>
-      </div>
+      <TransactionDoneState
+        title={t('submitSuccess')}
+        subtitle={t('tabs.stockOut')}
+        onReset={handleReset}
+        onClose={handleClose}
+      />
     );
   }
 
@@ -262,42 +239,19 @@ export function StockOutClient() {
 
       {/* Variant selector */}
       {hasVariants && (
-        <FormField label="Phân loại" required error={errors.variantId}>
-          <Combobox
-            value={variantId ?? null}
-            onValueChange={(v) => {
-              setVariantId(v as number | undefined);
-              setVariantSearch('');
-              setSalePrice('');
-              setErrors((prev) => ({ ...prev, variantId: '' }));
-            }}
-          >
-            <ComboboxInput
-              placeholder="Chọn phân loại..."
-              value={variantId && !variantSearch
-                ? (selectedVariant?.name ?? '')
-                : variantSearch}
-              onChange={(e) => {
-                setVariantSearch(e.target.value);
-                if (!e.target.value) setVariantId(undefined);
-              }}
-              aria-invalid={!!errors.variantId}
-            />
-            <ComboboxContent>
-              <ComboboxList>
-                <ComboboxEmpty>{tCommon('noResults')}</ComboboxEmpty>
-                {filteredVariants.map((v) => (
-                  <ComboboxItem key={v.id} value={v.id}>
-                    <span className="flex-1 truncate">{v.name}</span>
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      {v.effectivePrice.toLocaleString()}
-                    </span>
-                  </ComboboxItem>
-                ))}
-              </ComboboxList>
-            </ComboboxContent>
-          </Combobox>
-        </FormField>
+        <VariantChipSelector
+          label="Phân loại"
+          required
+          variants={selectedProduct?.variants ?? []}
+          selectedId={variantId}
+          onSelect={(v) => {
+            setVariantId(v);
+            setSalePrice('');
+            setErrors((prev) => ({ ...prev, variantId: '' }));
+          }}
+          error={errors.variantId}
+          getPrice={(v) => v.effectivePrice}
+        />
       )}
 
       {/* Quantity */}

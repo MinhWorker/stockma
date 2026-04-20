@@ -1,8 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useId, useState } from 'react';
+import { useCallback, useId, useState } from 'react';
 import { useRouter } from '@/i18n/routing';
-import { CheckCircle2, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
@@ -11,20 +11,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { FormField } from '@/components/forms/form-field';
 import { PriceInput } from '@/components/forms/price-input';
 import { ProductCombobox } from '@/components/forms/product-combobox';
-import {
-  Combobox,
-  ComboboxInput,
-  ComboboxContent,
-  ComboboxList,
-  ComboboxItem,
-  ComboboxEmpty,
-} from '@/components/ui/combobox';
-import { getProductsAction } from '@/actions/products.action';
 import { createTransactionAction } from '@/actions/inventory.action';
 import { useSession } from '@/lib/auth-client';
 import { getErrorKey } from '@/lib/error-message';
 import { useWithLoading } from '@/components/feedback/loading-overlay';
-import type { ProductSummary } from '@/services/types';
+import { useInventoryProductState } from '../../_hooks/use-inventory-product-state';
+import { VariantChipSelector } from '../../_components/variant-chip-selector';
+import { TransactionDoneState } from '../../_components/transaction-done-state';
 
 export function StockInClient() {
   const t = useTranslations('inventory');
@@ -35,10 +28,15 @@ export function StockInClient() {
   const quantityId = useId();
   const noteId = useId();
 
-  const [productId, setProductId] = useState<number>(0);
+  const productState = useInventoryProductState();
+  const {
+    productId, setProductId, variantId, setVariantId, products,
+    productSearch, setProductSearch, selectedProduct, hasVariants,
+    selectedVariant, resetProduct,
+  } = productState;
+
   const [quantity, setQuantity] = useState<number>(1);
   const [note, setNote] = useState('');
-  const [variantId, setVariantId] = useState<number | undefined>(undefined);
   const [purchasePrice, setPurchasePrice] = useState('');
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -46,30 +44,12 @@ export function StockInClient() {
   const withLoading = useWithLoading();
   const [done, setDone] = useState(false);
 
-  const [products, setProducts] = useState<ProductSummary[]>([]);
-  const [productSearch, setProductSearch] = useState('');
-  const [variantSearch, setVariantSearch] = useState('');
-
-  useEffect(() => {
-    getProductsAction().then(setProducts);
-  }, []);
-
-  const selectedProduct = products.find((p) => p.id === productId);
-  const hasVariants = (selectedProduct?.variants?.length ?? 0) > 0;
-  const selectedVariant = selectedProduct?.variants?.find((v) => v.id === variantId);
   const effectiveCostPrice = selectedVariant?.effectiveCostPrice ?? selectedProduct?.costPrice;
-
-  const filteredVariants = variantSearch
-    ? (selectedProduct?.variants ?? []).filter((v) =>
-        v.name.toLowerCase().includes(variantSearch.toLowerCase())
-      )
-    : (selectedProduct?.variants ?? []);
 
   function handleProductChange(v: number) {
     setProductId(v);
     setProductSearch('');
     setVariantId(undefined);
-    setVariantSearch('');
     setPurchasePrice('');
     setErrors((prev) => ({ ...prev, productId: '' }));
   }
@@ -78,7 +58,6 @@ export function StockInClient() {
     const e: Record<string, string> = {};
     if (!productId) e.productId = tCommon('required');
     if (!quantity || quantity < 1) e.quantity = tCommon('required');
-    // Rule: products with variants require a variant to be selected
     if (hasVariants && !variantId) e.variantId = tCommon('required');
     if (Object.keys(e).filter((k) => e[k]).length) {
       setErrors(e);
@@ -106,16 +85,13 @@ export function StockInClient() {
         setIsSubmitting(false);
       }
     });
-  }, [productId, quantity, note, variantId, purchasePrice, hasVariants, session, t, tCommon]);
+  }, [productId, quantity, note, variantId, purchasePrice, hasVariants, session, t, tCommon, withLoading]);
 
   function handleReset() {
-    setProductId(0);
+    resetProduct();
     setQuantity(1);
     setNote('');
-    setVariantId(undefined);
     setPurchasePrice('');
-    setProductSearch('');
-    setVariantSearch('');
     setErrors({});
     setDone(false);
   }
@@ -128,19 +104,12 @@ export function StockInClient() {
 
   if (done) {
     return (
-      <div className="flex flex-col items-center justify-center gap-6 py-16 px-4 text-center">
-        <CheckCircle2 className="h-16 w-16 text-emerald-500" strokeWidth={1.5} />
-        <div className="space-y-1">
-          <p className="text-lg font-semibold">{t('submitSuccess')}</p>
-          <p className="text-sm text-muted-foreground">{t('tabs.stockIn')}</p>
-        </div>
-        <div className="flex gap-3">
-          <Button variant="outline" className="min-h-[44px]" onClick={handleClose}>
-            {tCommon('close')}
-          </Button>
-          <Button className="min-h-[44px]" onClick={handleReset}>{t('newTransaction')}</Button>
-        </div>
-      </div>
+      <TransactionDoneState
+        title={t('submitSuccess')}
+        subtitle={t('tabs.stockIn')}
+        onReset={handleReset}
+        onClose={handleClose}
+      />
     );
   }
 
@@ -163,44 +132,20 @@ export function StockInClient() {
         )}
       </FormField>
 
-      {/* Variant selector — required when product has variants */}
       {hasVariants && (
-        <FormField label={t('form.variant')} required error={errors.variantId}>
-          <Combobox
-            value={variantId ?? null}
-            onValueChange={(v) => {
-              setVariantId(v as number | undefined);
-              setVariantSearch('');
-              setPurchasePrice('');
-              setErrors((prev) => ({ ...prev, variantId: '' }));
-            }}
-          >
-            <ComboboxInput
-              placeholder={t('form.variantPlaceholder')}
-              value={variantId && !variantSearch
-                ? (selectedVariant?.name ?? '')
-                : variantSearch}
-              onChange={(e) => {
-                setVariantSearch(e.target.value);
-                if (!e.target.value) setVariantId(undefined);
-              }}
-              aria-invalid={!!errors.variantId}
-            />
-            <ComboboxContent>
-              <ComboboxList>
-                <ComboboxEmpty>{tCommon('noResults')}</ComboboxEmpty>
-                {filteredVariants.map((v) => (
-                  <ComboboxItem key={v.id} value={v.id}>
-                    <span className="flex-1 truncate">{v.name}</span>
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      {v.effectiveCostPrice.toLocaleString()} / {v.effectivePrice.toLocaleString()}
-                    </span>
-                  </ComboboxItem>
-                ))}
-              </ComboboxList>
-            </ComboboxContent>
-          </Combobox>
-        </FormField>
+        <VariantChipSelector
+          label={t('form.variant')}
+          required
+          variants={selectedProduct?.variants ?? []}
+          selectedId={variantId}
+          onSelect={(v) => {
+            setVariantId(v);
+            setPurchasePrice('');
+            setErrors((prev) => ({ ...prev, variantId: '' }));
+          }}
+          error={errors.variantId}
+          getPrice={(v) => v.effectiveCostPrice}
+        />
       )}
 
       <FormField label={t('form.quantity')} required error={errors.quantity} htmlFor={quantityId}>
@@ -219,7 +164,6 @@ export function StockInClient() {
         />
       </FormField>
 
-      {/* Purchase price — optional */}
       <FormField label={t('form.purchasePrice')}>
         <PriceInput
           value={purchasePrice}

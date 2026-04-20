@@ -1,5 +1,4 @@
 import { Suspense } from 'react';
-import { getTranslations } from 'next-intl/server';
 import { getAllProducts } from '@/services/product.service';
 import { OrderProvider } from './_context/order-context';
 import { OrderCatalog } from './_components/order-catalog';
@@ -7,7 +6,7 @@ import { OrderCatalog } from './_components/order-catalog';
 export const dynamic = 'force-dynamic';
 
 export default async function OrderPage() {
-  const [products, t] = await Promise.all([getAllProducts(), getTranslations('order')]);
+  const [products] = await Promise.all([getAllProducts()]);
   // Only show products that have stock
   const available = products.filter((p) => p.stockQty > 0);
 
