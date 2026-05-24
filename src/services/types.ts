@@ -253,9 +253,9 @@ export interface DashboardStats {
   estimatedRevenue: number;
   // Tong chi phi nhap hang = SUM(purchasePrice * quantity) cua cac giao dich stock_in
   totalCost: number;
-  // Loi nhuan thuc te = actualRevenue - totalCost
+  // Loi nhuan thuc te tren hang da ban = tien da thu - gia nhap cua hang da ban
   actualGrossProfit: number;
-  // Loi nhuan uoc tinh = estimatedRevenue - totalCost
+  // Loi nhuan uoc tinh tren hang da ban = doanh thu uoc tinh - gia nhap cua hang da ban
   estimatedGrossProfit: number;
   // So DebtGroup dang open
   openDebtCount: number;

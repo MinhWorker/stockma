@@ -1,6 +1,7 @@
 import 'server-only';
 import { prisma } from '@/lib/db';
 import { parseDateStart, parseDateEnd } from '@/lib/utils';
+import { calculateSalesFinancialMetrics } from './financial-metrics';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -96,21 +97,6 @@ function calculateStockMetrics(
   return { totalStockValue, outOfStockCount };
 }
 
-function calculateRevenueFromSales(
-  saleTransactions: Array<{ quantity: number; salePrice: number | null; debtGroup: { paidAmount: number } | null }>,
-  paidDebtGroups: Array<{ paidAmount: number }>
-): { estimatedRevenue: number; actualRevenue: number } {
-  let estimatedRevenue = 0;
-  let actualRevenue = 0;
-  for (const tx of saleTransactions) {
-    const amount = (tx.salePrice ?? 0) * Math.abs(tx.quantity);
-    estimatedRevenue += amount;
-    if (!tx.debtGroup) actualRevenue += amount;
-  }
-  for (const dg of paidDebtGroups) actualRevenue += dg.paidAmount;
-  return { estimatedRevenue, actualRevenue };
-}
-
 function calculateTotalCost(
   stockInTransactions: Array<{ quantity: number; purchasePrice: number | null }>
 ): number {
@@ -133,7 +119,7 @@ export async function getOverviewReport(filters: ReportFilters): Promise<Overvie
   const dateFilter = buildDateRangeFilter(dateFrom, dateTo);
   const transactionDateFilter = dateFilter ? { createdAt: dateFilter } : {};
 
-  const [products, stockAggregates, saleTransactions, stockInTransactions, openDebtGroups, paidDebtGroups, transactionCounts] =
+  const [products, stockAggregates, saleTransactions, stockInTransactions, openDebtGroups, transactionCounts] =
     await Promise.all([
       prisma.product.findMany({
         where: inventoryId ? { inventoryId } : undefined,
@@ -146,7 +132,14 @@ export async function getOverviewReport(filters: ReportFilters): Promise<Overvie
       }),
       prisma.stockTransaction.findMany({
         where: { type: 'stock_out', stockOutType: { in: ['retail', 'wholesale'] }, isGift: false, ...inventoryFilter, ...transactionDateFilter },
-        select: { quantity: true, salePrice: true, debtGroup: { select: { paidAmount: true } } },
+        select: {
+          quantity: true,
+          salePrice: true,
+          purchasePrice: true,
+          product: { select: { costPrice: true } },
+          variant: { select: { costPrice: true } },
+          debtGroup: { select: { paidAmount: true } },
+        },
       }),
       prisma.stockTransaction.findMany({
         where: { type: 'stock_in', ...inventoryFilter, ...transactionDateFilter },
@@ -155,13 +148,6 @@ export async function getOverviewReport(filters: ReportFilters): Promise<Overvie
       prisma.debtGroup.findMany({
         where: { status: 'open', ...(inventoryId && { transaction: { product: { inventoryId } } }) },
         select: { totalAmount: true, paidAmount: true },
-      }),
-      prisma.debtGroup.findMany({
-        where: {
-          ...(inventoryId ? { transaction: { product: { inventoryId } } } : {}),
-          ...(dateFilter ? { transaction: { createdAt: dateFilter } } : {}),
-        },
-        select: { paidAmount: true },
       }),
       prisma.stockTransaction.groupBy({
         by: ['type'],
@@ -173,7 +159,12 @@ export async function getOverviewReport(filters: ReportFilters): Promise<Overvie
 
   const stockMap = new Map(stockAggregates.map((r) => [r.productId, r._sum.quantity ?? 0]));
   const { totalStockValue, outOfStockCount } = calculateStockMetrics(products, stockMap);
-  const { estimatedRevenue, actualRevenue } = calculateRevenueFromSales(saleTransactions, paidDebtGroups);
+  const {
+    estimatedRevenue,
+    actualRevenue,
+    estimatedGrossProfit,
+    actualGrossProfit,
+  } = calculateSalesFinancialMetrics(saleTransactions);
   const totalCost = calculateTotalCost(stockInTransactions);
   const openDebtAmount = calculateOpenDebtAmount(openDebtGroups);
 
@@ -188,8 +179,8 @@ export async function getOverviewReport(filters: ReportFilters): Promise<Overvie
     estimatedRevenue,
     actualRevenue,
     totalCost,
-    estimatedGrossProfit: estimatedRevenue - totalCost,
-    actualGrossProfit: actualRevenue - totalCost,
+    estimatedGrossProfit,
+    actualGrossProfit,
     openDebtCount: openDebtGroups.length,
     openDebtAmount,
     stockInQty: stockInRow?._sum.quantity ?? 0,

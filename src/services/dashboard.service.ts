@@ -2,6 +2,7 @@ import 'server-only';
 import { cache } from 'react';
 import { prisma } from '@/lib/db';
 import { getTransactions } from './transaction.service';
+import { calculateSalesFinancialMetrics } from './financial-metrics';
 import type { DashboardStats } from './types';
 
 // ---------------------------------------------------------------------------
@@ -35,21 +36,6 @@ function calculateStockValueAndOutOfStock(
     if (qty === 0) outOfStockCount++;
   }
   return { totalStockValue, outOfStockCount };
-}
-
-function calculateRevenue(
-  saleTransactions: Array<{ quantity: number; salePrice: number | null; debtGroup: { id: number; paidAmount: number } | null }>,
-  allDebtGroups: Array<{ paidAmount: number }>
-): { estimatedRevenue: number; actualRevenue: number } {
-  let estimatedRevenue = 0;
-  let actualRevenue = 0;
-  for (const tx of saleTransactions) {
-    const amount = (tx.salePrice ?? 0) * Math.abs(tx.quantity);
-    estimatedRevenue += amount;
-    if (!tx.debtGroup) actualRevenue += amount;
-  }
-  for (const dg of allDebtGroups) actualRevenue += dg.paidAmount;
-  return { estimatedRevenue, actualRevenue };
 }
 
 function buildDailyChart(
@@ -116,7 +102,6 @@ export const getDashboardStats = cache(
       openDebtGroups,
       chartTransactions,
       topProductsRaw,
-      allDebtGroups,
     ] = await Promise.all([
       prisma.product.count(inventoryId ? { where: { inventoryId } } : undefined),
       prisma.inventory.count(),
@@ -138,7 +123,15 @@ export const getDashboardStats = cache(
           isGift: false,
           ...(inventoryFilter ?? {}),
         },
-        select: { id: true, quantity: true, salePrice: true, debtGroup: { select: { id: true, paidAmount: true } } },
+        select: {
+          id: true,
+          quantity: true,
+          salePrice: true,
+          purchasePrice: true,
+          product: { select: { costPrice: true } },
+          variant: { select: { costPrice: true } },
+          debtGroup: { select: { id: true, paidAmount: true } },
+        },
       }),
       prisma.stockTransaction.findMany({
         where: { type: 'stock_in', ...(inventoryFilter ?? {}) },
@@ -168,10 +161,6 @@ export const getDashboardStats = cache(
         orderBy: { _sum: { quantity: 'asc' } },
         take: 5,
       }),
-      prisma.debtGroup.findMany({
-        where: inventoryId ? { transaction: { product: { inventoryId } } } : undefined,
-        select: { paidAmount: true },
-      }),
     ]);
 
     const stockMap = new Map<number, number>(
@@ -179,7 +168,12 @@ export const getDashboardStats = cache(
     );
 
     const { totalStockValue, outOfStockCount } = calculateStockValueAndOutOfStock(products, stockMap);
-    const { estimatedRevenue, actualRevenue } = calculateRevenue(saleTransactions, allDebtGroups);
+    const {
+      estimatedRevenue,
+      actualRevenue,
+      estimatedGrossProfit,
+      actualGrossProfit,
+    } = calculateSalesFinancialMetrics(saleTransactions);
     const totalCost = stockInTransactions.reduce((sum, tx) => sum + (tx.purchasePrice ?? 0) * tx.quantity, 0);
     const openDebtAmount = openDebtGroups.reduce((sum, dg) => sum + (dg.totalAmount - dg.paidAmount), 0);
     const dailyChart = buildDailyChart(dateKeys, chartTransactions);
@@ -195,8 +189,8 @@ export const getDashboardStats = cache(
       actualRevenue,
       estimatedRevenue,
       totalCost,
-      actualGrossProfit: actualRevenue - totalCost,
-      estimatedGrossProfit: estimatedRevenue - totalCost,
+      actualGrossProfit,
+      estimatedGrossProfit,
       openDebtCount: openDebtGroups.length,
       openDebtAmount,
       recentTransactions,
