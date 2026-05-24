@@ -68,6 +68,20 @@ NEON_PROJECT_ID=<Neon project id>
 NEXTJS_USAGE_MONITOR_KEY=<Neon API key used by /api/db-usage>
 ```
 
+The staging URL must remain accessible without Vercel SSO deployment protection;
+otherwise automated UX smoke tests will stop at Vercel's authentication page
+instead of reaching StockMa's login screen. If needed, check:
+
+```bash
+npx vercel@latest project protection stockma --format json
+```
+
+and disable SSO protection for this project:
+
+```bash
+npx vercel@latest project protection disable stockma --sso
+```
+
 The repo-level Vercel build command lives in `vercel.json`:
 
 ```bash

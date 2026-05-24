@@ -117,6 +117,8 @@ https://stockma-git-staging-minhnks-projects.vercel.app/
 
 Staging is the fixed Vercel Preview deployment for the Git branch `staging`.
 It must use the Neon branch named `staging`, not the production Neon branch.
+The staging URL must remain accessible without Vercel SSO protection so agents
+can run `verify:ux` against it.
 For staging, configure Vercel Preview environment variables scoped to Git branch
 `staging`:
 
