@@ -71,6 +71,7 @@ export function StockOutClient() {
     variantId,
     setVariantId,
     products,
+    isLoadingProducts,
     productSearch,
     setProductSearch,
     selectedProduct,
@@ -260,6 +261,7 @@ export function StockOutClient() {
             setProductSearch(s);
             if (!s) handleProductChange(0);
           }}
+          isLoading={isLoadingProducts}
           error={!!errors.productId}
         />
         {selectedProduct && (
@@ -283,6 +285,7 @@ export function StockOutClient() {
           }}
           error={errors.variantId}
           getPrice={(v) => v.effectivePrice}
+          disableOutOfStock
         />
       )}
       {hasVariants && !variantId && (

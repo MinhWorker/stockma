@@ -9,9 +9,20 @@ export function useInventoryProductState() {
   const [variantId, setVariantId] = useState<number | undefined>(undefined);
   const [products, setProducts] = useState<ProductSummary[]>([]);
   const [productSearch, setProductSearch] = useState('');
+  const [isLoadingProducts, setIsLoadingProducts] = useState(true);
 
   useEffect(() => {
-    getProductsAction().then(setProducts);
+    let isMounted = true;
+    getProductsAction()
+      .then((items) => {
+        if (isMounted) setProducts(items);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingProducts(false);
+      });
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const selectedProduct = products.find((p) => p.id === productId);
@@ -30,6 +41,7 @@ export function useInventoryProductState() {
     variantId,
     setVariantId,
     products,
+    isLoadingProducts,
     productSearch,
     setProductSearch,
     selectedProduct,

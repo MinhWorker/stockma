@@ -32,6 +32,7 @@ export function ReturnForm() {
     variantId,
     setVariantId,
     products,
+    isLoadingProducts,
     productSearch,
     setProductSearch,
     selectedProduct,
@@ -132,6 +133,7 @@ export function ReturnForm() {
             setProductSearch(s);
             if (!s) handleProductChange(0);
           }}
+          isLoading={isLoadingProducts}
           error={!!errors.productId}
         />
       </FormField>

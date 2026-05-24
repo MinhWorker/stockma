@@ -20,6 +20,7 @@ interface ProductComboboxProps {
   onProductChange: (id: number) => void;
   onSearchChange: (search: string) => void;
   error?: boolean;
+  isLoading?: boolean;
   placeholder?: string;
   /** When provided, shows an "Add new product" link at the bottom of the dropdown */
   addNewHref?: string;
@@ -32,6 +33,7 @@ export function ProductCombobox({
   onProductChange,
   onSearchChange,
   error,
+  isLoading,
   placeholder,
   addNewHref,
 }: ProductComboboxProps) {
@@ -64,17 +66,25 @@ export function ProductCombobox({
       />
       <ComboboxContent>
         <ComboboxList>
-          {filtered.length === 0
-            ? <ComboboxEmpty>{tCommon('noResults')}</ComboboxEmpty>
-            : null}
-          {filtered.map((p) => (
-            <ComboboxItem key={p.id} value={p.id}>
-              <span className="flex-1 truncate">{p.name}</span>
-              <span className="ml-2 text-xs text-muted-foreground">{p.categoryName}</span>
-            </ComboboxItem>
-          ))}
+          {isLoading ? (
+            <div className="flex w-full justify-center px-2 py-3 text-sm text-muted-foreground">
+              {tCommon('loading')}
+            </div>
+          ) : (
+            <>
+              {filtered.length === 0
+                ? <ComboboxEmpty>{tCommon('noResults')}</ComboboxEmpty>
+                : null}
+              {filtered.map((p) => (
+                <ComboboxItem key={p.id} value={p.id}>
+                  <span className="flex-1 truncate">{p.name}</span>
+                  <span className="ml-2 text-xs text-muted-foreground">{p.categoryName}</span>
+                </ComboboxItem>
+              ))}
+            </>
+          )}
         </ComboboxList>
-        {addNewHref && (
+        {addNewHref && !isLoading && (
           <div className="border-t border-border px-2 py-2">
             <Link
               href={addNewHref as Parameters<typeof Link>[0]['href']}

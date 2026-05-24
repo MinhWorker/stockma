@@ -7,10 +7,11 @@ import { Button } from '@/components/ui/button';
 interface ProductFormHeaderProps {
   isEditing: boolean;
   isSubmitting: boolean;
+  canSave?: boolean;
   onSave: () => void;
 }
 
-export function ProductFormHeader({ isEditing, isSubmitting, onSave }: ProductFormHeaderProps) {
+export function ProductFormHeader({ isEditing, isSubmitting, canSave = true, onSave }: ProductFormHeaderProps) {
   const t = useTranslations('products');
   const tCommon = useTranslations('common');
 
@@ -23,7 +24,7 @@ export function ProductFormHeader({ isEditing, isSubmitting, onSave }: ProductFo
         size="sm"
         className="min-h-[36px] min-w-[72px]"
         onClick={onSave}
-        disabled={isSubmitting}
+        disabled={isSubmitting || !canSave}
       >
         {isSubmitting
           ? <Loader2 className="h-4 w-4 animate-spin" />

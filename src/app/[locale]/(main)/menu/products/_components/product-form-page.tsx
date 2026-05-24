@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { useRouter, usePathname } from '@/i18n/routing';
 import { toast } from 'sonner';
 import { useTranslations } from 'next-intl';
+import { Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import {
   createProductAction,
   updateProductAction,
@@ -108,6 +110,8 @@ export function ProductFormPage({ product }: Props) {
   const [errors, setErrors] = useState<ProductFormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const headerRef = useRef<HTMLDivElement | null>(null);
+  const [isHeaderVisible, setIsHeaderVisible] = useState(true);
 
   // Reference data
   const [categories, setCategories] = useState<CategorySummary[]>([]);
@@ -147,6 +151,20 @@ export function ProductFormPage({ product }: Props) {
     setDirty(isDirty);
     return () => setDirty(false);
   }, [isDirty, setDirty]);
+
+  const canSave = !isEditing || isDirty;
+
+  useEffect(() => {
+    const node = headerRef.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsHeaderVisible(entry.isIntersecting),
+      { threshold: 0.1 }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
 
   // Restore draft if user navigated back from settings
   const { save: saveDraft } = useFormDraft<FormDraft>(
@@ -409,16 +427,17 @@ export function ProductFormPage({ product }: Props) {
   return (
     <PageTransition>
       {/* Sub-header */}
-      <div className="bg-background border-b border-border">
+      <div ref={headerRef} className="bg-background border-b border-border">
         <ProductFormHeader
           isEditing={isEditing}
           isSubmitting={isSubmitting}
+          canSave={canSave}
           onSave={handleSaveClick}
         />
       </div>
 
       {/* Form body */}
-      <div className="px-4 py-5 space-y-6 pb-10" aria-disabled={isSubmitting || undefined}>
+      <div className="px-4 py-5 space-y-6 pb-32" aria-disabled={isSubmitting || undefined}>
 
         {/* Basic info */}
         <ProductBasicFields
@@ -457,6 +476,21 @@ export function ProductFormPage({ product }: Props) {
           onChangeRow={handleChangeVariantRow}
         />
       </div>
+
+      {!isHeaderVisible && (
+        <div className="fixed inset-x-0 bottom-[72px] z-50 mx-auto w-full max-w-md border-t border-border bg-background/95 px-4 py-3 shadow-[0_-8px_24px_rgba(15,23,42,0.12)] backdrop-blur-sm">
+          <Button
+            className="w-full"
+            size="lg"
+            onClick={handleSaveClick}
+            disabled={isSubmitting || !canSave}
+          >
+            {isSubmitting
+              ? <Loader2 className="h-4 w-4 animate-spin" />
+              : tCommon('save')}
+          </Button>
+        </div>
+      )}
 
       <ConfirmDialog
         open={confirmOpen}

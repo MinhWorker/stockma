@@ -35,6 +35,7 @@ export function StockInClient() {
     variantId,
     setVariantId,
     products,
+    isLoadingProducts,
     productSearch,
     setProductSearch,
     selectedProduct,
@@ -149,6 +150,7 @@ export function StockInClient() {
             setProductSearch(s);
             if (!s) handleProductChange(0);
           }}
+          isLoading={isLoadingProducts}
           error={!!errors.productId}
           addNewHref="/menu/products/new?back=/menu/stock-in"
         />
