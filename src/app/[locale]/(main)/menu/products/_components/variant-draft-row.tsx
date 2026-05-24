@@ -25,13 +25,14 @@ export function VariantDraftRow({
   onRemove,
 }: VariantDraftRowProps) {
   const t = useTranslations('products');
+  const headerLabel = draft.name.trim() || t('variantIndex', { index: index + 1 });
 
   return (
     <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
       {/* Row header */}
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-          {t('variantIndex', { index: index + 1 })}
+        <span className="text-xs font-medium text-muted-foreground">
+          {headerLabel}
         </span>
         <Button
           type="button"
