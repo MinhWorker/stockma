@@ -13,6 +13,10 @@ const ERROR_KEY_MAP: Record<string, string> = {
   ERR_INVALID_PAYMENT_AMOUNT: 'errInvalidPaymentAmount',
   ERR_PAYMENT_EXCEEDS_REMAINING: 'errPaymentExceedsRemaining',
   ERR_RETURN_QTY_INVALID: 'errReturnQtyInvalid',
+  ERR_TRANSACTION_REQUIRED: 'errTransactionRequired',
+  ERR_TRANSACTION_NOT_FOUND: 'errTransactionNotFound',
+  ERR_CORRECTION_TARGET_INVALID: 'errCorrectionTargetInvalid',
+  ERR_CORRECTION_NO_CHANGE: 'errCorrectionNoChange',
 };
 
 /**

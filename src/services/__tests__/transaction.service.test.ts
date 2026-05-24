@@ -1,5 +1,9 @@
 import { describe, test, expect } from 'vitest';
 import fc from 'fast-check';
+import {
+  calculateCancellationDelta,
+  calculateCorrectionDelta,
+} from '../transaction.service';
 
 // ---------------------------------------------------------------------------
 // Pure helpers extracted from transaction.service logic for property testing
@@ -218,5 +222,31 @@ describe('gift transaction properties', () => {
       ),
       { numRuns: 100 }
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Transaction corrections: immutable ledger deltas
+// ---------------------------------------------------------------------------
+describe('transaction correction deltas', () => {
+  test('editing a stock-in from 100 to 10 creates a -90 adjustment', () => {
+    expect(calculateCorrectionDelta({
+      targetType: 'stock_in',
+      targetQuantity: 100,
+      correctedQuantity: 10,
+    })).toBe(-90);
+  });
+
+  test('editing a stock-out from 100 to 10 creates a +90 adjustment', () => {
+    expect(calculateCorrectionDelta({
+      targetType: 'stock_out',
+      targetQuantity: -100,
+      correctedQuantity: 10,
+    })).toBe(90);
+  });
+
+  test('cancelling a transaction creates the opposite quantity', () => {
+    expect(calculateCancellationDelta({ targetQuantity: 100 })).toBe(-100);
+    expect(calculateCancellationDelta({ targetQuantity: -5 })).toBe(5);
   });
 });

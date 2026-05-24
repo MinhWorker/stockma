@@ -8,6 +8,8 @@ import type {
   TransactionRecord,
   CreateTransactionInput,
   CreateStockOutInput,
+  CreateTransactionCorrectionInput,
+  TransactionType,
 } from './types';
 
 export const TRANSACTION_CACHE_TAG = 'transactions';
@@ -35,6 +37,9 @@ function mapToTransactionRecord(tx: {
   isGift: boolean;
   parentTransactionId: number | null;
   returnTransactionId: number | null;
+  targetTransactionId: number | null;
+  correctionType: string | null;
+  correctedQuantity: number | null;
   createdAt: Date;
 }): TransactionRecord {
   return {
@@ -56,6 +61,9 @@ function mapToTransactionRecord(tx: {
     isGift: tx.isGift,
     parentTransactionId: tx.parentTransactionId,
     returnTransactionId: tx.returnTransactionId,
+    targetTransactionId: tx.targetTransactionId,
+    correctionType: tx.correctionType as TransactionRecord['correctionType'],
+    correctedQuantity: tx.correctedQuantity,
     createdAt: tx.createdAt,
   };
 }
@@ -67,6 +75,25 @@ const TRANSACTION_INCLUDE = {
 } as const;
 
 type PrismaTx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
+export function calculateCancellationDelta(input: { targetQuantity: number }): number {
+  return -input.targetQuantity;
+}
+
+export function calculateCorrectionDelta(input: {
+  targetType: TransactionType;
+  targetQuantity: number;
+  correctedQuantity: number;
+}): number {
+  const correctedSignedQuantity =
+    input.targetType === 'stock_out'
+      ? -Math.abs(input.correctedQuantity)
+      : input.targetType === 'stock_in'
+        ? Math.abs(input.correctedQuantity)
+        : input.correctedQuantity;
+
+  return correctedSignedQuantity - input.targetQuantity;
+}
 
 /**
  * Throws ERR_VARIANT_REQUIRED if the product has variants but no variantId was provided.
@@ -303,6 +330,75 @@ export async function createStockOutWithGifts(input: CreateStockOutInput): Promi
     mainTransaction: mapToTransactionRecord(result.mainTx),
     giftTransactions: result.giftTransactions,
   };
+}
+
+export async function createTransactionCorrection(
+  input: CreateTransactionCorrectionInput
+): Promise<TransactionRecord> {
+  requireNonEmpty(input.userId, 'User ID');
+  if (!input.targetTransactionId) throw new Error('ERR_TRANSACTION_REQUIRED');
+
+  const result = await prisma.$transaction(async (tx) => {
+    const target = await tx.stockTransaction.findUnique({
+      where: { id: input.targetTransactionId },
+      include: TRANSACTION_INCLUDE,
+    });
+    if (!target) throw new Error('ERR_TRANSACTION_NOT_FOUND');
+    if (target.correctionType) throw new Error('ERR_CORRECTION_TARGET_INVALID');
+
+    const previousCorrections = await tx.stockTransaction.aggregate({
+      where: { targetTransactionId: target.id },
+      _sum: { quantity: true },
+    });
+    const effectiveTargetQuantity = target.quantity + (previousCorrections._sum.quantity ?? 0);
+
+    let delta: number;
+    let correctedQuantity: number;
+
+    if (input.correctionType === 'cancellation') {
+      delta = calculateCancellationDelta({ targetQuantity: effectiveTargetQuantity });
+      correctedQuantity = 0;
+    } else {
+      if (input.correctedQuantity == null || input.correctedQuantity === 0) {
+        throw new Error('ERR_INVALID_QUANTITY');
+      }
+      if (target.type !== 'adjustment' && input.correctedQuantity < 0) {
+        throw new Error('ERR_INVALID_QUANTITY');
+      }
+      delta = calculateCorrectionDelta({
+        targetType: target.type,
+        targetQuantity: effectiveTargetQuantity,
+        correctedQuantity: input.correctedQuantity,
+      });
+      correctedQuantity = input.correctedQuantity;
+    }
+
+    if (delta === 0) throw new Error('ERR_CORRECTION_NO_CHANGE');
+
+    const stockBefore = await getLatestStockSnapshot(tx, target.productId, target.variantId);
+    const stockAfter = stockBefore + delta;
+    if (stockAfter < 0) throw new Error('ERR_INSUFFICIENT_STOCK');
+
+    return tx.stockTransaction.create({
+      data: {
+        type: 'adjustment',
+        quantity: delta,
+        stockBefore,
+        stockAfter,
+        note: input.note,
+        productId: target.productId,
+        userId: input.userId,
+        ...(target.variantId && { variantId: target.variantId }),
+        targetTransactionId: target.id,
+        correctionType: input.correctionType,
+        correctedQuantity,
+        isGift: false,
+      },
+      include: TRANSACTION_INCLUDE,
+    });
+  });
+
+  return mapToTransactionRecord(result);
 }
 
 export async function createBatchTransactions(

@@ -45,3 +45,61 @@ After pushing to `master`, an agent should:
 ```bash
 $env:BASE_URL="https://stockma.vercel.app"; npm run verify:ux
 ```
+
+## Stable Staging Flow
+
+StockMa has a fixed staging lane:
+
+```txt
+Git branch: staging
+Vercel URL: https://stockma-git-staging-minhnks-projects.vercel.app/
+Neon branch: staging
+```
+
+The staging Vercel Preview environment must be scoped to Git branch `staging`
+and must not use the production Neon branch. Required staging values:
+
+```txt
+DATABASE_URL=<pooled Neon connection string for Neon branch staging>
+DIRECT_URL=<direct Neon connection string for Neon branch staging>
+BETTER_AUTH_URL=https://stockma-git-staging-minhnks-projects.vercel.app
+NEXT_PUBLIC_APP_URL=https://stockma-git-staging-minhnks-projects.vercel.app
+NEON_PROJECT_ID=<Neon project id>
+NEXTJS_USAGE_MONITOR_KEY=<Neon API key used by /api/db-usage>
+```
+
+The staging URL must remain accessible without Vercel SSO deployment protection;
+otherwise automated UX smoke tests will stop at Vercel's authentication page
+instead of reaching StockMa's login screen. If needed, check:
+
+```bash
+npx vercel@latest project protection stockma --format json
+```
+
+and disable SSO protection for this project:
+
+```bash
+npx vercel@latest project protection disable stockma --sso
+```
+
+The repo-level Vercel build command lives in `vercel.json`:
+
+```bash
+npx prisma migrate deploy && npm run build
+```
+
+That command applies migrations to the staging branch database during staging
+deployments, because `prisma.config.ts` reads `DIRECT_URL` first.
+
+To refresh staging with the current checked-out commit:
+
+```bash
+git push origin HEAD:staging
+```
+
+Then wait for the newest Vercel deployment for branch `staging` to become
+`READY` and run:
+
+```bash
+$env:BASE_URL="https://stockma-git-staging-minhnks-projects.vercel.app"; npm run verify:ux
+```
