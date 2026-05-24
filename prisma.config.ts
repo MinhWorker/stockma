@@ -9,7 +9,8 @@ export default defineConfig({
     path: 'prisma/migrations',
   },
   datasource: {
-    // Use DIRECT_URL for Prisma CLI commands (migrations, introspection)
-    url: process.env['DIRECT_URL'],
+    // Use a direct/unpooled connection for Prisma CLI commands.
+    // Neon integrations may expose this as DATABASE_URL_UNPOOLED.
+    url: process.env['DIRECT_URL'] ?? process.env['DATABASE_URL_UNPOOLED'] ?? process.env['DATABASE_URL'],
   },
 });

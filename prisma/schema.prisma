@@ -161,6 +161,11 @@ model StockTransaction {
   giftItems            StockTransaction[] @relation("GiftItems")
   returnTransactionId  Int?
   returnTransaction    ReturnTransaction? @relation(fields: [returnTransactionId], references: [id])
+  targetTransactionId  Int?
+  targetTransaction    StockTransaction? @relation("TransactionCorrections", fields: [targetTransactionId], references: [id])
+  correctionTransactions StockTransaction[] @relation("TransactionCorrections")
+  correctionType       TransactionCorrectionType?
+  correctedQuantity    Int?
   debtGroup            DebtGroup?
   createdAt   DateTime         @default(now())
 }
@@ -169,6 +174,11 @@ enum TransactionType {
   stock_in
   stock_out
   adjustment
+}
+
+enum TransactionCorrectionType {
+  quantity_edit
+  cancellation
 }
 
 enum StockOutType {

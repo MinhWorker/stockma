@@ -64,7 +64,11 @@
     "errDebtAlreadyClosed": "Khoản nợ này đã được đóng",
     "errInvalidPaymentAmount": "Số tiền thanh toán phải lớn hơn 0",
     "errPaymentExceedsRemaining": "Số tiền thanh toán vượt quá số dư còn lại",
-    "errReturnQtyInvalid": "Số lượng trả hàng không hợp lệ"
+    "errReturnQtyInvalid": "Số lượng trả hàng không hợp lệ",
+    "errTransactionRequired": "Vui lòng chọn giao dịch cần điều chỉnh",
+    "errTransactionNotFound": "Không tìm thấy giao dịch cần điều chỉnh",
+    "errCorrectionTargetInvalid": "Chỉ điều chỉnh giao dịch gốc, không điều chỉnh một bút toán sửa khác",
+    "errCorrectionNoChange": "Số lượng mới không làm thay đổi tồn kho"
   },
   "auth": {
     "signIn": "Đăng nhập",
@@ -274,6 +278,25 @@
       "purchasePrice": "Giá nhập",
       "stockOutType": "Hình thức",
       "isGift": "Hàng tặng",
+      "correctionSection": "Sửa hoặc hủy giao dịch",
+      "correctionHelp": "Giao dịch gốc vẫn giữ trong lịch sử. Hệ thống sẽ tạo một giao dịch điều chỉnh mới để đưa tồn kho về đúng.",
+      "correctQuantity": "Sửa số lượng",
+      "cancelTransaction": "Hủy giao dịch",
+      "correctDialogTitle": "Sửa số liệu giao dịch",
+      "cancelDialogTitle": "Hủy giao dịch bằng bút toán điều chỉnh",
+      "correctedQuantity": "Số lượng đúng",
+      "correctedQuantityHelp": "Nhập số lượng đúng của giao dịch gốc. Ví dụ đã nhập 100 thay vì 10 thì nhập 10.",
+      "correctionNote": "Lý do điều chỉnh",
+      "correctionNotePlaceholder": "Ví dụ: Nhập sai số lượng, sửa từ 100 thành 10",
+      "submitCorrection": "Tạo điều chỉnh giao dịch",
+      "submitCancellation": "Tạo giao dịch hủy",
+      "correctionSuccess": "Đã tạo giao dịch điều chỉnh",
+      "targetTransaction": "Điều chỉnh cho giao dịch",
+      "correctionType": "Loại điều chỉnh",
+      "correctionTypes": {
+        "quantity_edit": "Sửa số lượng",
+        "cancellation": "Hủy giao dịch"
+      },
       "stockOutTypes": {
         "retail": "Bán lẻ",
         "wholesale": "Bán sỉ",

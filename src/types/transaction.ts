@@ -1,4 +1,5 @@
 export type TransactionType = 'stock_in' | 'stock_out' | 'adjustment';
+export type TransactionCorrectionType = 'quantity_edit' | 'cancellation';
 
 export interface Transaction {
   id: number;

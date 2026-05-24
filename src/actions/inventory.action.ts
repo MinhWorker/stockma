@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidateTag } from 'next/cache';
-import { createTransaction, createStockOutWithGifts } from '@/services/transaction.service';
+import { createTransaction, createStockOutWithGifts, createTransactionCorrection } from '@/services/transaction.service';
 import { getProductById } from '@/services/product.service';
 import { getAllInventories } from '@/services/inventory.service';
 import { sendNotificationToAll } from '@/services/notification.service';
@@ -11,6 +11,7 @@ import type {
   TransactionType,
   StockOutType,
   GiftItemInput,
+  TransactionCorrectionType,
 } from '@/services/types';
 
 export interface ActionResult<T = void> {
@@ -40,6 +41,14 @@ export interface CreateStockOutPayload {
   gifts?: GiftItemInput[];
   debtorName?: string;
   paidAmount?: number;
+}
+
+export interface CreateTransactionCorrectionPayload {
+  targetTransactionId: number;
+  correctionType: TransactionCorrectionType;
+  correctedQuantity?: number;
+  note?: string;
+  userId: string;
 }
 
 export async function createTransactionAction(
@@ -111,6 +120,27 @@ export async function createStockOutAction(
     revalidateTag(PRODUCT_CACHE_TAG, { expire: 0 });
 
     return { success: true, data: result };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
+  }
+}
+
+export async function createTransactionCorrectionAction(
+  payload: CreateTransactionCorrectionPayload
+): Promise<ActionResult> {
+  try {
+    await createTransactionCorrection({
+      targetTransactionId: payload.targetTransactionId,
+      correctionType: payload.correctionType,
+      correctedQuantity: payload.correctedQuantity,
+      note: payload.note,
+      userId: payload.userId,
+    });
+
+    revalidateTag(TRANSACTION_CACHE_TAG, { expire: 0 });
+    revalidateTag(PRODUCT_CACHE_TAG, { expire: 0 });
+
+    return { success: true };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : 'Unknown error' };
   }

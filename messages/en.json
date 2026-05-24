@@ -64,7 +64,11 @@
     "errDebtAlreadyClosed": "This debt has already been closed",
     "errInvalidPaymentAmount": "Payment amount must be greater than 0",
     "errPaymentExceedsRemaining": "Payment amount exceeds the remaining balance",
-    "errReturnQtyInvalid": "Return quantity is invalid"
+    "errReturnQtyInvalid": "Return quantity is invalid",
+    "errTransactionRequired": "Please choose a transaction to correct",
+    "errTransactionNotFound": "Transaction to correct was not found",
+    "errCorrectionTargetInvalid": "Correct the original transaction, not another correction entry",
+    "errCorrectionNoChange": "The new quantity does not change stock"
   },
   "auth": {
     "signIn": "Sign In",
@@ -274,6 +278,25 @@
       "purchasePrice": "Purchase Price",
       "stockOutType": "Method",
       "isGift": "Gift item",
+      "correctionSection": "Correct or cancel transaction",
+      "correctionHelp": "The original transaction stays in history. StockMa creates a new adjustment transaction to bring stock back to the correct number.",
+      "correctQuantity": "Correct quantity",
+      "cancelTransaction": "Cancel transaction",
+      "correctDialogTitle": "Correct transaction quantity",
+      "cancelDialogTitle": "Cancel transaction with an adjustment",
+      "correctedQuantity": "Correct quantity",
+      "correctedQuantityHelp": "Enter the correct quantity for the original transaction. If 100 was entered instead of 10, enter 10.",
+      "correctionNote": "Correction reason",
+      "correctionNotePlaceholder": "Example: Wrong quantity entered, correcting 100 to 10",
+      "submitCorrection": "Create transaction correction",
+      "submitCancellation": "Create cancellation transaction",
+      "correctionSuccess": "Transaction correction created",
+      "targetTransaction": "Corrects transaction",
+      "correctionType": "Correction type",
+      "correctionTypes": {
+        "quantity_edit": "Quantity correction",
+        "cancellation": "Cancellation"
+      },
       "stockOutTypes": {
         "retail": "Retail",
         "wholesale": "Wholesale",

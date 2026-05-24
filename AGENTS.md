@@ -109,6 +109,33 @@ Production URL:
 https://stockma.vercel.app/
 ```
 
+Stable staging URL:
+
+```txt
+https://stockma-git-staging-minhnks-projects.vercel.app/
+```
+
+Staging is the fixed Vercel Preview deployment for the Git branch `staging`.
+It must use the Neon branch named `staging`, not the production Neon branch.
+For staging, configure Vercel Preview environment variables scoped to Git branch
+`staging`:
+
+```txt
+DATABASE_URL=<pooled Neon connection string for branch staging>
+DIRECT_URL=<direct Neon connection string for branch staging>
+BETTER_AUTH_URL=https://stockma-git-staging-minhnks-projects.vercel.app
+NEXT_PUBLIC_APP_URL=https://stockma-git-staging-minhnks-projects.vercel.app
+NEON_PROJECT_ID=<same Neon project id>
+NEXTJS_USAGE_MONITOR_KEY=<Neon API key used by db usage monitor>
+```
+
+The Vercel build command is defined in `vercel.json` and runs Prisma migrations
+before building:
+
+```bash
+npx prisma migrate deploy && npm run build
+```
+
 The project is linked locally with Vercel. Read deployment metadata from
 `.vercel/repo.json`; older Vercel CLI versions may use `.vercel/project.json`.
 The `.vercel/` folder is intentionally ignored by git.
@@ -116,3 +143,9 @@ The `.vercel/` folder is intentionally ignored by git.
 Use the metadata to poll Vercel deployments after pushing to `master`. The
 production check is complete only after the latest deployment is `READY` and the
 production UX smoke test passes.
+
+To check staging after deploying branch `staging`:
+
+```bash
+$env:BASE_URL="https://stockma-git-staging-minhnks-projects.vercel.app"; npm run verify:ux
+```

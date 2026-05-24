@@ -94,6 +94,8 @@ export interface InventorySummary {
 
 export type TransactionType = 'stock_in' | 'stock_out' | 'adjustment';
 
+export type TransactionCorrectionType = 'quantity_edit' | 'cancellation';
+
 export type StockOutType = 'retail' | 'wholesale' | 'transfer';
 
 export interface TransactionRecord {
@@ -115,6 +117,9 @@ export interface TransactionRecord {
   isGift: boolean;
   parentTransactionId: number | null;
   returnTransactionId: number | null;
+  targetTransactionId: number | null;
+  correctionType: TransactionCorrectionType | null;
+  correctedQuantity: number | null;
   createdAt: Date;
 }
 
@@ -142,6 +147,14 @@ export interface CreateStockOutInput extends CreateTransactionInput {
   gifts?: GiftItemInput[];
   debtorName?: string;
   paidAmount?: number;
+}
+
+export interface CreateTransactionCorrectionInput {
+  targetTransactionId: number;
+  correctionType: TransactionCorrectionType;
+  correctedQuantity?: number;
+  note?: string;
+  userId: string;
 }
 
 // ---------------------------------------------------------------------------
