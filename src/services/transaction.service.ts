@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { requireNonEmpty } from './validation';
 import { resolveEffectivePrices } from './variant.service';
 import { getLatestStockSnapshot } from './stock.helpers';
+import { getCurrentAccountingPeriodForWrite } from './accounting-period.service';
 import type {
   TransactionRecord,
   CreateTransactionInput,
@@ -147,9 +148,12 @@ async function validateVariantBelongsToProduct(
 // ---------------------------------------------------------------------------
 
 export const getTransactions = cache(
-  async (options?: { productId?: number; limit?: number }): Promise<TransactionRecord[]> => {
+  async (options?: { productId?: number; limit?: number; accountingPeriodId?: number }): Promise<TransactionRecord[]> => {
     const rows = await prisma.stockTransaction.findMany({
-      where: options?.productId ? { productId: options.productId } : undefined,
+      where: {
+        ...(options?.productId ? { productId: options.productId } : {}),
+        ...(options?.accountingPeriodId ? { accountingPeriodId: options.accountingPeriodId } : {}),
+      },
       include: TRANSACTION_INCLUDE,
       orderBy: { createdAt: 'desc' },
       take: options?.limit,
@@ -174,6 +178,8 @@ export async function createTransaction(input: CreateTransactionInput): Promise<
   if (input.type === 'stock_out' && input.quantity > 0) throw new Error('ERR_INVALID_QUANTITY');
 
   const result = await prisma.$transaction(async (tx) => {
+    const accountingPeriod = await getCurrentAccountingPeriodForWrite(tx);
+
     if (input.variantId) {
       await validateVariantBelongsToProduct(tx, input.variantId, input.productId);
     }
@@ -193,7 +199,7 @@ export async function createTransaction(input: CreateTransactionInput): Promise<
     const resolvedPurchasePrice =
       input.type === 'stock_in' ? (input.purchasePrice ?? effectiveCostPrice) : null;
 
-    const stockBefore = await getLatestStockSnapshot(tx, input.productId, input.variantId);
+    const stockBefore = await getLatestStockSnapshot(tx, input.productId, input.variantId, accountingPeriod.id);
     const stockAfter = stockBefore + input.quantity;
     if (stockAfter < 0) throw new Error('ERR_INSUFFICIENT_STOCK');
 
@@ -211,6 +217,7 @@ export async function createTransaction(input: CreateTransactionInput): Promise<
         ...(resolvedSalePrice !== null && { salePrice: resolvedSalePrice }),
         ...(resolvedPurchasePrice !== null && { purchasePrice: resolvedPurchasePrice }),
         isGift: input.isGift ?? false,
+        accountingPeriodId: accountingPeriod.id,
         ...(input.parentTransactionId && { parentTransactionId: input.parentTransactionId }),
       },
       include: TRANSACTION_INCLUDE,
@@ -235,6 +242,8 @@ export async function createStockOutWithGifts(input: CreateStockOutInput): Promi
   if (input.salePrice != null && input.salePrice <= 0) throw new Error('ERR_INVALID_SALE_PRICE');
 
   const result = await prisma.$transaction(async (tx) => {
+    const accountingPeriod = await getCurrentAccountingPeriodForWrite(tx);
+
     if (input.variantId) {
       await validateVariantBelongsToProduct(tx, input.variantId, input.productId);
     }
@@ -243,7 +252,7 @@ export async function createStockOutWithGifts(input: CreateStockOutInput): Promi
     const { effectivePrice } = await fetchEffectivePricesForTransaction(tx, input.productId, input.variantId);
     const resolvedSalePrice = input.stockOutType === 'transfer' ? null : (input.salePrice ?? effectivePrice);
 
-    const mainStockBefore = await getLatestStockSnapshot(tx, input.productId, input.variantId);
+    const mainStockBefore = await getLatestStockSnapshot(tx, input.productId, input.variantId, accountingPeriod.id);
     const mainStockAfter = mainStockBefore + input.quantity; // quantity is negative for stock_out
     if (mainStockAfter < 0) throw new Error('ERR_INSUFFICIENT_STOCK');
 
@@ -258,7 +267,7 @@ export async function createStockOutWithGifts(input: CreateStockOutInput): Promi
 
       const giftKey = `${gift.productId}:${gift.variantId ?? 'null'}`;
       if (!giftStockMap.has(giftKey)) {
-        giftStockMap.set(giftKey, await getLatestStockSnapshot(tx, gift.productId, gift.variantId));
+        giftStockMap.set(giftKey, await getLatestStockSnapshot(tx, gift.productId, gift.variantId, accountingPeriod.id));
       }
       const remainingStock = giftStockMap.get(giftKey)! - gift.quantity;
       if (remainingStock < 0) throw new Error('ERR_INSUFFICIENT_STOCK');
@@ -278,6 +287,7 @@ export async function createStockOutWithGifts(input: CreateStockOutInput): Promi
         stockOutType: input.stockOutType,
         ...(resolvedSalePrice !== null && { salePrice: resolvedSalePrice }),
         isGift: false,
+        accountingPeriodId: accountingPeriod.id,
       },
       include: TRANSACTION_INCLUDE,
     });
@@ -287,7 +297,14 @@ export async function createStockOutWithGifts(input: CreateStockOutInput): Promi
       const paidAmount = input.paidAmount ?? 0;
       if (paidAmount < totalAmount) {
         await tx.debtGroup.create({
-          data: { transactionId: mainTx.id, debtorName: input.debtorName, totalAmount, paidAmount, status: 'open' },
+          data: {
+            transactionId: mainTx.id,
+            debtorName: input.debtorName,
+            totalAmount,
+            paidAmount,
+            initialPaidAmount: paidAmount,
+            status: 'open',
+          },
         });
       }
     }
@@ -298,7 +315,7 @@ export async function createStockOutWithGifts(input: CreateStockOutInput): Promi
     for (const gift of input.gifts ?? []) {
       const giftKey = `${gift.productId}:${gift.variantId ?? 'null'}`;
       if (!writtenStockMap.has(giftKey)) {
-        writtenStockMap.set(giftKey, await getLatestStockSnapshot(tx, gift.productId, gift.variantId));
+        writtenStockMap.set(giftKey, await getLatestStockSnapshot(tx, gift.productId, gift.variantId, accountingPeriod.id));
       }
       const giftStockBefore = writtenStockMap.get(giftKey)!;
       const giftStockAfter = giftStockBefore - gift.quantity;
@@ -316,6 +333,7 @@ export async function createStockOutWithGifts(input: CreateStockOutInput): Promi
           stockOutType: input.stockOutType,
           salePrice: 0,
           isGift: true,
+          accountingPeriodId: accountingPeriod.id,
           parentTransactionId: mainTx.id,
         },
         include: TRANSACTION_INCLUDE,
@@ -339,12 +357,14 @@ export async function createTransactionCorrection(
   if (!input.targetTransactionId) throw new Error('ERR_TRANSACTION_REQUIRED');
 
   const result = await prisma.$transaction(async (tx) => {
+    const accountingPeriod = await getCurrentAccountingPeriodForWrite(tx);
     const target = await tx.stockTransaction.findUnique({
       where: { id: input.targetTransactionId },
       include: TRANSACTION_INCLUDE,
     });
     if (!target) throw new Error('ERR_TRANSACTION_NOT_FOUND');
     if (target.correctionType) throw new Error('ERR_CORRECTION_TARGET_INVALID');
+    if (target.accountingPeriodId !== accountingPeriod.id) throw new Error('ERR_PERIOD_CLOSED');
 
     const previousCorrections = await tx.stockTransaction.aggregate({
       where: { targetTransactionId: target.id },
@@ -375,7 +395,7 @@ export async function createTransactionCorrection(
 
     if (delta === 0) throw new Error('ERR_CORRECTION_NO_CHANGE');
 
-    const stockBefore = await getLatestStockSnapshot(tx, target.productId, target.variantId);
+    const stockBefore = await getLatestStockSnapshot(tx, target.productId, target.variantId, accountingPeriod.id);
     const stockAfter = stockBefore + delta;
     if (stockAfter < 0) throw new Error('ERR_INSUFFICIENT_STOCK');
 
@@ -393,6 +413,7 @@ export async function createTransactionCorrection(
         correctionType: input.correctionType,
         correctedQuantity,
         isGift: false,
+        accountingPeriodId: accountingPeriod.id,
       },
       include: TRANSACTION_INCLUDE,
     });
@@ -406,6 +427,7 @@ export async function createBatchTransactions(
 ): Promise<TransactionRecord[]> {
   return prisma.$transaction(async (tx) => {
     const created: TransactionRecord[] = [];
+    const accountingPeriod = await getCurrentAccountingPeriodForWrite(tx);
 
     for (const input of inputs) {
       if (!input.quantity || input.quantity === 0) throw new Error('ERR_INVALID_QUANTITY');
@@ -418,7 +440,7 @@ export async function createBatchTransactions(
       }
       await ensureVariantProvidedIfRequired(tx, input.productId, input.variantId);
 
-      const stockBefore = await getLatestStockSnapshot(tx, input.productId, input.variantId);
+      const stockBefore = await getLatestStockSnapshot(tx, input.productId, input.variantId, accountingPeriod.id);
       const stockAfter = stockBefore + input.quantity;
       if (stockAfter < 0) throw new Error('ERR_INSUFFICIENT_STOCK');
 
@@ -436,6 +458,7 @@ export async function createBatchTransactions(
           ...(input.salePrice != null && { salePrice: input.salePrice }),
           ...(input.purchasePrice != null && { purchasePrice: input.purchasePrice }),
           isGift: input.isGift ?? false,
+          accountingPeriodId: accountingPeriod.id,
           ...(input.parentTransactionId && { parentTransactionId: input.parentTransactionId }),
         },
         include: TRANSACTION_INCLUDE,

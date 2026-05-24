@@ -3,6 +3,8 @@ import { cache } from 'react';
 import { prisma } from '@/lib/db';
 import { getTransactions } from './transaction.service';
 import { calculateSalesFinancialMetrics } from './financial-metrics';
+import { getCurrentAccountingPeriodOrNull } from './accounting-period.service';
+import { fetchProductStockMap } from './stock.helpers';
 import type { DashboardStats } from './types';
 
 // ---------------------------------------------------------------------------
@@ -86,42 +88,41 @@ async function resolveTopProductNames(
 // ---------------------------------------------------------------------------
 
 export const getDashboardStats = cache(
-  async (inventoryId?: number): Promise<DashboardStats> => {
+  async (inventoryId?: number, accountingPeriodId?: number): Promise<DashboardStats> => {
     const inventoryFilter = inventoryId ? { product: { inventoryId } } : undefined;
     const { sevenDaysAgo, dateKeys } = buildLast7DaysWindow();
+    const activePeriod = accountingPeriodId ? null : await getCurrentAccountingPeriodOrNull();
+    const periodId = accountingPeriodId ?? activePeriod?.id;
+    const periodFilter = periodId ? { accountingPeriodId: periodId } : {};
 
     const [
       totalProducts,
       totalInventories,
       totalProviders,
-      stockAggregates,
       products,
       recentTransactions,
       saleTransactions,
       stockInTransactions,
       openDebtGroups,
+      debtPayments,
       chartTransactions,
       topProductsRaw,
     ] = await Promise.all([
       prisma.product.count(inventoryId ? { where: { inventoryId } } : undefined),
       prisma.inventory.count(),
       prisma.provider.count(),
-      prisma.stockTransaction.groupBy({
-        by: ['productId'],
-        _sum: { quantity: true },
-        where: inventoryFilter ?? {},
-      }),
       prisma.product.findMany({
         where: inventoryId ? { inventoryId } : undefined,
         select: { id: true, costPrice: true },
       }),
-      getTransactions({ limit: 10 }),
+      getTransactions({ limit: 10, ...(periodId ? { accountingPeriodId: periodId } : {}) }),
       prisma.stockTransaction.findMany({
         where: {
           type: 'stock_out',
           stockOutType: { in: ['retail', 'wholesale'] },
           isGift: false,
           ...(inventoryFilter ?? {}),
+          ...periodFilter,
         },
         select: {
           id: true,
@@ -130,11 +131,11 @@ export const getDashboardStats = cache(
           purchasePrice: true,
           product: { select: { costPrice: true } },
           variant: { select: { costPrice: true } },
-          debtGroup: { select: { id: true, paidAmount: true } },
+          debtGroup: { select: { id: true, paidAmount: true, initialPaidAmount: true } },
         },
       }),
       prisma.stockTransaction.findMany({
-        where: { type: 'stock_in', ...(inventoryFilter ?? {}) },
+        where: { type: 'stock_in', ...(inventoryFilter ?? {}), ...periodFilter },
         select: { quantity: true, purchasePrice: true },
       }),
       prisma.debtGroup.findMany({
@@ -144,8 +145,15 @@ export const getDashboardStats = cache(
         },
         select: { totalAmount: true, paidAmount: true },
       }),
+      prisma.debtPayment.findMany({
+        where: {
+          ...periodFilter,
+          ...(inventoryId ? { debtGroup: { transaction: { product: { inventoryId } } } } : {}),
+        },
+        select: { amount: true },
+      }),
       prisma.stockTransaction.findMany({
-        where: { createdAt: { gte: sevenDaysAgo }, ...(inventoryFilter ?? {}) },
+        where: { createdAt: { gte: sevenDaysAgo }, ...(inventoryFilter ?? {}), ...periodFilter },
         select: { type: true, quantity: true, salePrice: true, isGift: true, stockOutType: true, createdAt: true },
       }),
       // quantity is negative for stock_out, so ascending order = most sold
@@ -156,6 +164,7 @@ export const getDashboardStats = cache(
           isGift: false,
           stockOutType: { in: ['retail', 'wholesale'] },
           ...(inventoryFilter ?? {}),
+          ...periodFilter,
         },
         _sum: { quantity: true, salePrice: true },
         orderBy: { _sum: { quantity: 'asc' } },
@@ -163,17 +172,16 @@ export const getDashboardStats = cache(
       }),
     ]);
 
-    const stockMap = new Map<number, number>(
-      stockAggregates.map((r) => [r.productId, r._sum.quantity ?? 0])
-    );
+    const stockMap = await fetchProductStockMap({ inventoryId, accountingPeriodId: periodId });
 
     const { totalStockValue, outOfStockCount } = calculateStockValueAndOutOfStock(products, stockMap);
+    const debtPaymentAmount = debtPayments.reduce((sum, payment) => sum + payment.amount, 0);
     const {
       estimatedRevenue,
       actualRevenue,
       estimatedGrossProfit,
       actualGrossProfit,
-    } = calculateSalesFinancialMetrics(saleTransactions);
+    } = calculateSalesFinancialMetrics(saleTransactions, debtPaymentAmount);
     const totalCost = stockInTransactions.reduce((sum, tx) => sum + (tx.purchasePrice ?? 0) * tx.quantity, 0);
     const openDebtAmount = openDebtGroups.reduce((sum, dg) => sum + (dg.totalAmount - dg.paidAmount), 0);
     const dailyChart = buildDailyChart(dateKeys, chartTransactions);

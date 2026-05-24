@@ -1,5 +1,6 @@
 type DebtGroupPayment = {
   paidAmount: number;
+  initialPaidAmount?: number | null;
 } | null;
 
 type CostSource = {
@@ -27,7 +28,8 @@ function resolveUnitCost(tx: SaleTransactionForMetrics): number {
 }
 
 export function calculateSalesFinancialMetrics(
-  saleTransactions: SaleTransactionForMetrics[]
+  saleTransactions: SaleTransactionForMetrics[],
+  additionalCollectedRevenue = 0
 ): SalesFinancialMetrics {
   let estimatedRevenue = 0;
   let actualRevenue = 0;
@@ -38,7 +40,9 @@ export function calculateSalesFinancialMetrics(
     const quantity = Math.abs(tx.quantity);
     const saleAmount = (tx.salePrice ?? 0) * quantity;
     const soldCost = resolveUnitCost(tx) * quantity;
-    const collectedAmount = tx.debtGroup ? tx.debtGroup.paidAmount : saleAmount;
+    const collectedAmount = tx.debtGroup
+      ? (tx.debtGroup.initialPaidAmount ?? tx.debtGroup.paidAmount)
+      : saleAmount;
 
     estimatedRevenue += saleAmount;
     actualRevenue += collectedAmount;
@@ -48,8 +52,8 @@ export function calculateSalesFinancialMetrics(
 
   return {
     estimatedRevenue,
-    actualRevenue,
+    actualRevenue: actualRevenue + additionalCollectedRevenue,
     estimatedGrossProfit,
-    actualGrossProfit,
+    actualGrossProfit: actualGrossProfit + additionalCollectedRevenue,
   };
 }

@@ -1,5 +1,6 @@
 import 'server-only';
 import { prisma } from '@/lib/db';
+import { getCurrentAccountingPeriodForWrite } from './accounting-period.service';
 import type { DebtStatus, DebtGroupSummary, DebtGroupDetail } from './types';
 
 export const DEBT_CACHE_TAG = 'debts';
@@ -91,12 +92,15 @@ export async function addDebtPayment(
   if (amount <= 0) throw new Error('ERR_INVALID_PAYMENT_AMOUNT');
 
   const result = await prisma.$transaction(async (tx) => {
+    const accountingPeriod = await getCurrentAccountingPeriodForWrite(tx);
     const debtGroup = await tx.debtGroup.findUniqueOrThrow({ where: { id: debtGroupId } });
     if (debtGroup.status !== 'open') throw new Error('ERR_DEBT_ALREADY_CLOSED');
     const remaining = debtGroup.totalAmount - debtGroup.paidAmount;
     if (amount > remaining) throw new Error('ERR_PAYMENT_EXCEEDS_REMAINING');
 
-    await tx.debtPayment.create({ data: { debtGroupId, amount, note, userId } });
+    await tx.debtPayment.create({
+      data: { debtGroupId, amount, note, userId, accountingPeriodId: accountingPeriod.id },
+    });
 
     const newPaidAmount = debtGroup.paidAmount + amount;
     const newStatus = newPaidAmount >= debtGroup.totalAmount ? 'closed' : 'open';

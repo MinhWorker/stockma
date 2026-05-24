@@ -13,9 +13,13 @@ interface Props {
   stats: DashboardStats;
   inventories: InventorySummary[];
   selectedInventoryId?: number;
+  activePeriod?: {
+    id: number;
+    startLabel: string;
+  } | null;
 }
 
-export function MobileDashboardClient({ stats, inventories, selectedInventoryId }: Props) {
+export function MobileDashboardClient({ stats, inventories, selectedInventoryId, activePeriod }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const t = useTranslations('dashboard');
@@ -77,6 +81,14 @@ export function MobileDashboardClient({ stats, inventories, selectedInventoryId 
 
   return (
     <div className="space-y-6 pb-8">
+      {activePeriod && (
+        <div className="px-4">
+          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/40 px-3 py-1.5 text-xs text-muted-foreground">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            <span>Kỳ #{activePeriod.id} mở từ {activePeriod.startLabel}</span>
+          </div>
+        </div>
+      )}
 
       {/* Inventory picker */}
       {inventories.length > 1 && (
@@ -293,7 +305,7 @@ function DailyBarChart({ data }: { data: DailyChartEntry[] }) {
     const diffDays = Math.round((today.getTime() - date.getTime()) / 86400000);
     if (diffDays === 0) return 'Hôm nay';
     if (diffDays === 1) return 'Hôm qua';
-    return date.toLocaleDateString('vi-VN', { weekday: 'short' });
+    return ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'][date.getDay()];
   });
 
   return (

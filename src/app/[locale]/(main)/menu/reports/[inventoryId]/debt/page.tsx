@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { getTranslations } from 'next-intl/server';
 import { getDebtReport } from '@/services/report.service';
+import { getAccountingPeriods } from '@/services/accounting-period.service';
 import { ReportFilters } from '../_components/report-filters';
 import { InventoryBadge } from '../_components/inventory-badge';
 import { formatPrice, formatDate } from '@/lib/utils';
@@ -9,26 +10,31 @@ export const dynamic = 'force-dynamic';
 
 interface Props {
   params: Promise<{ inventoryId: string }>;
-  searchParams: Promise<{ from?: string; to?: string }>;
+  searchParams: Promise<{ from?: string; to?: string; period?: string }>;
 }
 
 export default async function DebtReportPage({ params, searchParams }: Props) {
-  const [{ inventoryId }, { from, to }] = await Promise.all([params, searchParams]);
-  const t = await getTranslations('reports.debt');
+  const [{ inventoryId }, { from, to, period }, periods] = await Promise.all([params, searchParams, getAccountingPeriods()]);
+  const accountingPeriodId = period ? Number(period) : undefined;
   return (
     <div className="space-y-0">
       <InventoryBadge inventoryId={inventoryId} />
-      <ReportFilters />
+      <ReportFilters periods={periods} />
       <Suspense fallback={<TableSkeleton />}>
-        <DebtData inventoryId={inventoryId === 'all' ? undefined : Number(inventoryId)} dateFrom={from} dateTo={to} />
+        <DebtData
+          inventoryId={inventoryId === 'all' ? undefined : Number(inventoryId)}
+          dateFrom={from}
+          dateTo={to}
+          accountingPeriodId={Number.isFinite(accountingPeriodId) ? accountingPeriodId : undefined}
+        />
       </Suspense>
     </div>
   );
 }
 
-async function DebtData({ inventoryId, dateFrom, dateTo }: { inventoryId?: number; dateFrom?: string; dateTo?: string }) {
+async function DebtData({ inventoryId, dateFrom, dateTo, accountingPeriodId }: { inventoryId?: number; dateFrom?: string; dateTo?: string; accountingPeriodId?: number }) {
   const [rows, t] = await Promise.all([
-    getDebtReport({ inventoryId, dateFrom, dateTo }),
+    getDebtReport({ inventoryId, dateFrom, dateTo, accountingPeriodId }),
     getTranslations('reports.debt'),
   ]);
 

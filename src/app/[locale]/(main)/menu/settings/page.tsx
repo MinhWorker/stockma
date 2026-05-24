@@ -1,19 +1,20 @@
 import { Suspense } from 'react';
-import { getTranslations } from 'next-intl/server';
 import { getAllInventories } from '@/services/inventory.service';
 import { getSession } from '@/lib/session';
 import { getSubscriptionsByUserId } from '@/services/notification.service';
+import { getAccountingPeriodClosePreview, getCurrentAccountingPeriodOrNull } from '@/services/accounting-period.service';
 import { MobileSettingsClient } from './_components/mobile-settings-client';
 import { InventorySection } from './_components/inventory-section';
 import { DangerZone } from './_components/danger-zone';
+import { AccountingPeriodSection } from './_components/accounting-period-section';
 
 export default async function MobileSettingsPage() {
-  const t = await getTranslations('settings');
-
   const inventoriesPromise = getAllInventories();
   const prefsPromise = getSession().then((session) =>
     session?.user?.id ? getSubscriptionsByUserId(session.user.id) : null
   );
+  const periodPromise = getCurrentAccountingPeriodOrNull();
+  const periodPreviewPromise = getAccountingPeriodClosePreview();
 
   return (
     <div className="space-y-6 pb-6">
@@ -22,6 +23,9 @@ export default async function MobileSettingsPage() {
       </Suspense>
       <Suspense fallback={<SettingsSkeleton />}>
         <SettingsData prefsPromise={prefsPromise} />
+      </Suspense>
+      <Suspense fallback={<PeriodSkeleton />}>
+        <PeriodData periodPromise={periodPromise} previewPromise={periodPreviewPromise} />
       </Suspense>
       {process.env.NODE_ENV === 'development' && <DangerZone />}
     </div>
@@ -75,6 +79,17 @@ function InventorySkeleton() {
   );
 }
 
+async function PeriodData({
+  periodPromise,
+  previewPromise,
+}: {
+  periodPromise: ReturnType<typeof getCurrentAccountingPeriodOrNull>;
+  previewPromise: ReturnType<typeof getAccountingPeriodClosePreview>;
+}) {
+  const [period, preview] = await Promise.all([periodPromise, previewPromise]);
+  return <AccountingPeriodSection currentPeriod={period} preview={preview} />;
+}
+
 function SettingsSkeleton() {
   return (
     <div className="space-y-px">
@@ -95,6 +110,23 @@ function SettingsSkeleton() {
       <div className="px-4 pt-3 space-y-2">
         <div className="h-9 w-full rounded-lg animate-shimmer" />
         <div className="h-9 w-full rounded-lg animate-shimmer" />
+      </div>
+    </div>
+  );
+}
+
+function PeriodSkeleton() {
+  return (
+    <div className="space-y-px">
+      <div className="px-4 pb-1 pt-2">
+        <div className="h-3 w-24 rounded-md animate-shimmer" />
+      </div>
+      <div className="flex items-center justify-between px-4 py-3 border-y border-border">
+        <div className="space-y-1.5 flex-1 mr-4">
+          <div className="h-3 w-2/5 rounded-md animate-shimmer" />
+          <div className="h-2.5 w-3/5 rounded-md animate-shimmer" />
+        </div>
+        <div className="h-4 w-10 rounded-md animate-shimmer" />
       </div>
     </div>
   );

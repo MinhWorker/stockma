@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { getTranslations } from 'next-intl/server';
 import { getOverviewReport } from '@/services/report.service';
+import { getAccountingPeriods } from '@/services/accounting-period.service';
 import { StatCard } from '../_components/stat-card';
 import { ReportFilters } from '../_components/report-filters';
 import { InventoryBadge } from '../_components/inventory-badge';
@@ -10,23 +11,25 @@ export const dynamic = 'force-dynamic';
 
 interface Props {
   params: Promise<{ inventoryId: string }>;
-  searchParams: Promise<{ from?: string; to?: string }>;
+  searchParams: Promise<{ from?: string; to?: string; period?: string }>;
 }
 
 export default async function OverviewReportPage({ params, searchParams }: Props) {
   const { inventoryId } = await params;
-  const { from, to } = await searchParams;
-  const t = await getTranslations('reports.overview');
+  const { from, to, period } = await searchParams;
+  const periods = await getAccountingPeriods();
+  const accountingPeriodId = period ? Number(period) : undefined;
 
   return (
     <div className="space-y-0 pb-24">
       <InventoryBadge inventoryId={inventoryId} />
-      <ReportFilters />
+      <ReportFilters periods={periods} />
       <Suspense fallback={<OverviewSkeleton />}>
         <OverviewData
           inventoryId={inventoryId === 'all' ? undefined : Number(inventoryId)}
           dateFrom={from}
           dateTo={to}
+          accountingPeriodId={Number.isFinite(accountingPeriodId) ? accountingPeriodId : undefined}
         />
       </Suspense>
     </div>
@@ -63,13 +66,15 @@ async function OverviewData({
   inventoryId,
   dateFrom,
   dateTo,
+  accountingPeriodId,
 }: {
   inventoryId?: number;
   dateFrom?: string;
   dateTo?: string;
+  accountingPeriodId?: number;
 }) {
   const [data, t] = await Promise.all([
-    getOverviewReport({ inventoryId, dateFrom, dateTo }),
+    getOverviewReport({ inventoryId, dateFrom, dateTo, accountingPeriodId }),
     getTranslations('reports.overview'),
   ]);
 

@@ -2,6 +2,8 @@ import 'server-only';
 import { prisma } from '@/lib/db';
 import { parseDateStart, parseDateEnd } from '@/lib/utils';
 import { calculateSalesFinancialMetrics } from './financial-metrics';
+import { getCurrentAccountingPeriodOrNull } from './accounting-period.service';
+import { fetchProductStockMap } from './stock.helpers';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -11,6 +13,7 @@ export interface ReportFilters {
   inventoryId?: number;
   dateFrom?: string;
   dateTo?: string;
+  accountingPeriodId?: number;
 }
 
 export interface OverviewReport {
@@ -118,53 +121,67 @@ export async function getOverviewReport(filters: ReportFilters): Promise<Overvie
   const inventoryFilter = inventoryId ? { product: { inventoryId } } : {};
   const dateFilter = buildDateRangeFilter(dateFrom, dateTo);
   const transactionDateFilter = dateFilter ? { createdAt: dateFilter } : {};
+  const activePeriod = filters.accountingPeriodId ? null : await getCurrentAccountingPeriodOrNull();
+  const periodId = filters.accountingPeriodId ?? activePeriod?.id;
+  const periodFilter = periodId ? { accountingPeriodId: periodId } : {};
 
-  const [products, stockAggregates, saleTransactions, stockInTransactions, openDebtGroups, transactionCounts] =
+  const [products, saleTransactions, stockInTransactions, openDebtGroups, debtPayments, transactionCounts] =
     await Promise.all([
       prisma.product.findMany({
         where: inventoryId ? { inventoryId } : undefined,
         select: { id: true, costPrice: true },
       }),
-      prisma.stockTransaction.groupBy({
-        by: ['productId'],
-        where: { ...inventoryFilter },
-        _sum: { quantity: true },
-      }),
       prisma.stockTransaction.findMany({
-        where: { type: 'stock_out', stockOutType: { in: ['retail', 'wholesale'] }, isGift: false, ...inventoryFilter, ...transactionDateFilter },
+        where: {
+          type: 'stock_out',
+          stockOutType: { in: ['retail', 'wholesale'] },
+          isGift: false,
+          ...inventoryFilter,
+          ...transactionDateFilter,
+          ...periodFilter,
+        },
         select: {
           quantity: true,
           salePrice: true,
           purchasePrice: true,
           product: { select: { costPrice: true } },
           variant: { select: { costPrice: true } },
-          debtGroup: { select: { paidAmount: true } },
+          debtGroup: { select: { paidAmount: true, initialPaidAmount: true } },
         },
       }),
       prisma.stockTransaction.findMany({
-        where: { type: 'stock_in', ...inventoryFilter, ...transactionDateFilter },
+        where: { type: 'stock_in', ...inventoryFilter, ...transactionDateFilter, ...periodFilter },
         select: { quantity: true, purchasePrice: true },
       }),
       prisma.debtGroup.findMany({
         where: { status: 'open', ...(inventoryId && { transaction: { product: { inventoryId } } }) },
         select: { totalAmount: true, paidAmount: true },
       }),
+      prisma.debtPayment.findMany({
+        where: {
+          ...periodFilter,
+          ...transactionDateFilter,
+          ...(inventoryId ? { debtGroup: { transaction: { product: { inventoryId } } } } : {}),
+        },
+        select: { amount: true },
+      }),
       prisma.stockTransaction.groupBy({
         by: ['type'],
-        where: { ...inventoryFilter, ...transactionDateFilter },
+        where: { ...inventoryFilter, ...transactionDateFilter, ...periodFilter },
         _sum: { quantity: true },
         _count: { id: true },
       }),
     ]);
 
-  const stockMap = new Map(stockAggregates.map((r) => [r.productId, r._sum.quantity ?? 0]));
+  const stockMap = await fetchProductStockMap({ inventoryId, accountingPeriodId: periodId });
   const { totalStockValue, outOfStockCount } = calculateStockMetrics(products, stockMap);
+  const debtPaymentAmount = debtPayments.reduce((sum, payment) => sum + payment.amount, 0);
   const {
     estimatedRevenue,
     actualRevenue,
     estimatedGrossProfit,
     actualGrossProfit,
-  } = calculateSalesFinancialMetrics(saleTransactions);
+  } = calculateSalesFinancialMetrics(saleTransactions, debtPaymentAmount);
   const totalCost = calculateTotalCost(stockInTransactions);
   const openDebtAmount = calculateOpenDebtAmount(openDebtGroups);
 
@@ -193,6 +210,9 @@ export async function getProductReport(filters: ReportFilters): Promise<ProductR
   const { inventoryId, dateFrom, dateTo } = filters;
   const dateFilter = buildDateRangeFilter(dateFrom, dateTo);
   const transactionDateFilter = dateFilter ? { createdAt: dateFilter } : {};
+  const activePeriod = filters.accountingPeriodId ? null : await getCurrentAccountingPeriodOrNull();
+  const periodId = filters.accountingPeriodId ?? activePeriod?.id;
+  const periodFilter = periodId ? { accountingPeriodId: periodId } : {};
 
   const products = await prisma.product.findMany({
     where: inventoryId ? { inventoryId } : undefined,
@@ -202,19 +222,36 @@ export async function getProductReport(filters: ReportFilters): Promise<ProductR
 
   const productIds = products.map((p) => p.id);
 
-  const [stockAggregates, allTransactions] = await Promise.all([
-    prisma.stockTransaction.groupBy({
-      by: ['productId'],
-      where: { productId: { in: productIds } },
-      _sum: { quantity: true },
-    }),
+  const [stockMap, allTransactions, debtPayments] = await Promise.all([
+    fetchProductStockMap({ productIds, accountingPeriodId: periodId }),
     prisma.stockTransaction.findMany({
-      where: { productId: { in: productIds }, ...transactionDateFilter },
-      select: { productId: true, type: true, quantity: true, salePrice: true, purchasePrice: true, isGift: true, stockOutType: true, debtGroup: { select: { paidAmount: true } } },
+      where: { productId: { in: productIds }, ...transactionDateFilter, ...periodFilter },
+      select: {
+        productId: true,
+        type: true,
+        quantity: true,
+        salePrice: true,
+        purchasePrice: true,
+        isGift: true,
+        stockOutType: true,
+        debtGroup: { select: { paidAmount: true, initialPaidAmount: true } },
+      },
+    }),
+    prisma.debtPayment.findMany({
+      where: {
+        ...periodFilter,
+        ...transactionDateFilter,
+        debtGroup: { transaction: { productId: { in: productIds } } },
+      },
+      select: { amount: true, debtGroup: { select: { transaction: { select: { productId: true } } } } },
     }),
   ]);
 
-  const stockMap = new Map(stockAggregates.map((r) => [r.productId, r._sum.quantity ?? 0]));
+  const debtPaymentsByProduct = new Map<number, number>();
+  for (const payment of debtPayments) {
+    const productId = payment.debtGroup.transaction.productId;
+    debtPaymentsByProduct.set(productId, (debtPaymentsByProduct.get(productId) ?? 0) + payment.amount);
+  }
 
   return products.map((p) => {
     const transactions = allTransactions.filter((t) => t.productId === p.id);
@@ -229,9 +266,10 @@ export async function getProductReport(filters: ReportFilters): Promise<ProductR
         stockOutQty += Math.abs(tx.quantity);
         const amount = (tx.salePrice ?? 0) * Math.abs(tx.quantity);
         estimatedRevenue += amount;
-        if (!tx.debtGroup) actualRevenue += amount;
+        actualRevenue += tx.debtGroup ? (tx.debtGroup.initialPaidAmount ?? tx.debtGroup.paidAmount) : amount;
       }
     }
+    actualRevenue += debtPaymentsByProduct.get(p.id) ?? 0;
 
     return {
       productId: p.id,
@@ -251,6 +289,9 @@ export async function getProductReport(filters: ReportFilters): Promise<ProductR
 export async function getProviderReport(filters: ReportFilters): Promise<ProviderReportRow[]> {
   const { inventoryId, dateFrom, dateTo } = filters;
   const dateFilter = buildDateRangeFilter(dateFrom, dateTo);
+  const activePeriod = filters.accountingPeriodId ? null : await getCurrentAccountingPeriodOrNull();
+  const periodId = filters.accountingPeriodId ?? activePeriod?.id;
+  const periodFilter = periodId ? { accountingPeriodId: periodId } : {};
 
   const providers = await prisma.provider.findMany({
     include: {
@@ -268,23 +309,19 @@ export async function getProviderReport(filters: ReportFilters): Promise<Provide
     if (provider.provideItems.length === 0) continue;
     const productIds = provider.provideItems.map((p) => p.id);
 
-    const [stockAggregates, stockInAggregate] = await Promise.all([
-      prisma.stockTransaction.groupBy({
-        by: ['productId'],
-        where: { productId: { in: productIds } },
-        _sum: { quantity: true },
-      }),
-      prisma.stockTransaction.aggregate({
+    const [stockMap, stockInTransactions] = await Promise.all([
+      fetchProductStockMap({ productIds, accountingPeriodId: periodId }),
+      prisma.stockTransaction.findMany({
         where: {
           type: 'stock_in',
           productId: { in: productIds },
           ...(dateFilter ? { createdAt: dateFilter } : {}),
+          ...periodFilter,
         },
-        _sum: { quantity: true, purchasePrice: true },
+        select: { quantity: true, purchasePrice: true },
       }),
     ]);
 
-    const stockMap = new Map(stockAggregates.map((r) => [r.productId, r._sum.quantity ?? 0]));
     const totalStockValue = provider.provideItems.reduce(
       (sum, p) => sum + (stockMap.get(p.id) ?? 0) * p.costPrice,
       0
@@ -295,8 +332,8 @@ export async function getProviderReport(filters: ReportFilters): Promise<Provide
       providerName: provider.name,
       totalProducts: provider.provideItems.length,
       totalStockValue,
-      totalCost: stockInAggregate._sum.purchasePrice ?? 0,
-      stockInQty: stockInAggregate._sum.quantity ?? 0,
+      totalCost: calculateTotalCost(stockInTransactions),
+      stockInQty: stockInTransactions.reduce((sum, tx) => sum + tx.quantity, 0),
     });
   }
 
@@ -307,6 +344,9 @@ export async function getStockMovementReport(filters: ReportFilters): Promise<St
   const { inventoryId, dateFrom, dateTo } = filters;
   const dateFilter = buildDateRangeFilter(dateFrom, dateTo);
   const transactionDateFilter = dateFilter ? { createdAt: dateFilter } : {};
+  const activePeriod = filters.accountingPeriodId ? null : await getCurrentAccountingPeriodOrNull();
+  const periodId = filters.accountingPeriodId ?? activePeriod?.id;
+  const periodFilter = periodId ? { accountingPeriodId: periodId } : {};
 
   const products = await prisma.product.findMany({
     where: inventoryId ? { inventoryId } : undefined,
@@ -316,7 +356,7 @@ export async function getStockMovementReport(filters: ReportFilters): Promise<St
 
   const productIds = products.map((p) => p.id);
   const transactions = await prisma.stockTransaction.findMany({
-    where: { productId: { in: productIds }, ...transactionDateFilter },
+    where: { productId: { in: productIds }, ...transactionDateFilter, ...periodFilter },
     select: { productId: true, type: true, quantity: true, salePrice: true, isGift: true, stockOutType: true },
   });
 
@@ -351,11 +391,19 @@ export async function getStockMovementReport(filters: ReportFilters): Promise<St
 export async function getDebtReport(filters: ReportFilters): Promise<DebtReportRow[]> {
   const { inventoryId, dateFrom, dateTo } = filters;
   const dateFilter = buildDateRangeFilter(dateFrom, dateTo);
+  const activePeriod = filters.accountingPeriodId ? null : await getCurrentAccountingPeriodOrNull();
+  const periodId = filters.accountingPeriodId ?? activePeriod?.id;
 
   const rows = await prisma.debtGroup.findMany({
     where: {
       ...(inventoryId && { transaction: { product: { inventoryId } } }),
       ...(dateFilter && { createdAt: dateFilter }),
+      ...(periodId && {
+        OR: [
+          { transaction: { accountingPeriodId: periodId } },
+          { periodDebtBalances: { some: { accountingPeriodId: periodId } } },
+        ],
+      }),
     },
     orderBy: { createdAt: 'desc' },
   });

@@ -2,6 +2,7 @@ import 'server-only';
 import { prisma } from '@/lib/db';
 import { resolveEffectivePrices } from './variant.service';
 import { getLatestStockSnapshot } from './stock.helpers';
+import { getCurrentAccountingPeriodForWrite } from './accounting-period.service';
 import type { CreateReturnInput, ReturnRecord } from './types';
 
 export const RETURN_CACHE_TAG = 'returns';
@@ -54,6 +55,8 @@ export async function createReturnTransaction(input: CreateReturnInput): Promise
   }
 
   const result = await prisma.$transaction(async (tx) => {
+    const accountingPeriod = await getCurrentAccountingPeriodForWrite(tx);
+
     if (input.variantId) {
       const variant = await tx.productVariant.findUnique({
         where: { id: input.variantId },
@@ -82,7 +85,7 @@ export async function createReturnTransaction(input: CreateReturnInput): Promise
     const resolvedPurchasePrice = input.purchasePrice ?? effectiveCostPrice;
 
     if (input.returnQty > 0) {
-      const currentStock = await getLatestStockSnapshot(tx, input.productId, input.variantId);
+      const currentStock = await getLatestStockSnapshot(tx, input.productId, input.variantId, accountingPeriod.id);
       if (currentStock - input.returnQty < 0) throw new Error('ERR_INSUFFICIENT_STOCK');
     }
 
@@ -95,6 +98,7 @@ export async function createReturnTransaction(input: CreateReturnInput): Promise
         purchasePrice: input.purchasePrice,
         note: input.note,
         userId: input.userId,
+        accountingPeriodId: accountingPeriod.id,
       },
       include: {
         product: { select: { name: true } },
@@ -104,7 +108,7 @@ export async function createReturnTransaction(input: CreateReturnInput): Promise
     });
 
     if (input.returnQty > 0) {
-      const stockBefore = await getLatestStockSnapshot(tx, input.productId, input.variantId);
+      const stockBefore = await getLatestStockSnapshot(tx, input.productId, input.variantId, accountingPeriod.id);
       await tx.stockTransaction.create({
         data: {
           type: 'stock_out',
@@ -115,12 +119,13 @@ export async function createReturnTransaction(input: CreateReturnInput): Promise
           userId: input.userId,
           ...(input.variantId && { variantId: input.variantId }),
           returnTransactionId: returnRecord.id,
+          accountingPeriodId: accountingPeriod.id,
         },
       });
     }
 
     if (input.replacementQty > 0) {
-      const stockBefore = await getLatestStockSnapshot(tx, input.productId, input.variantId);
+      const stockBefore = await getLatestStockSnapshot(tx, input.productId, input.variantId, accountingPeriod.id);
       await tx.stockTransaction.create({
         data: {
           type: 'stock_in',
@@ -132,6 +137,7 @@ export async function createReturnTransaction(input: CreateReturnInput): Promise
           ...(input.variantId && { variantId: input.variantId }),
           purchasePrice: resolvedPurchasePrice,
           returnTransactionId: returnRecord.id,
+          accountingPeriodId: accountingPeriod.id,
         },
       });
     }

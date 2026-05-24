@@ -3,14 +3,27 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { DatePicker } from '@/components/ui/date-picker';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SyncBackParams } from './sync-back-params';
 import { useQueryParams } from '@/hooks/use-query-params';
 import { cn } from '@/lib/utils';
+
+type AccountingPeriodOption = {
+  id: number;
+  startAt: Date;
+  endAt: Date | null;
+  status: string;
+};
 
 // ---------------------------------------------------------------------------
 // Date helpers
 // ---------------------------------------------------------------------------
 function toISO(d: Date) { return d.toISOString().slice(0, 10); }
+
+function formatShortDate(date: Date): string {
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`;
+}
 
 function getPresetRange(preset: string): { from: string; to: string } | null {
   const today = new Date();
@@ -40,13 +53,14 @@ function getPresetRange(preset: string): { from: string; to: string } | null {
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
-export function ReportFilters() {
+export function ReportFilters({ periods = [] }: { periods?: AccountingPeriodOption[] }) {
   const { get, replace } = useQueryParams();
   const t = useTranslations('reports');
 
   const dateFrom = get('from') ?? '';
   const dateTo = get('to') ?? '';
   const today = toISO(new Date());
+  const selectedPeriodId = get('period') ?? 'active';
 
   // Detect which preset is currently active (if any)
   const activePreset = useMemo(() => {
@@ -93,6 +107,26 @@ export function ReportFilters() {
     <>
       <SyncBackParams />
       <div className="px-4 py-2 space-y-2">
+        {periods.length > 0 && (
+          <Select
+            value={selectedPeriodId}
+            onValueChange={(value) => replace({ period: value === 'active' ? null : value })}
+          >
+            <SelectTrigger className="w-full bg-card">
+              <SelectValue placeholder="Kỳ đang mở" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Kỳ đang mở</SelectItem>
+              {periods.map((period) => (
+                <SelectItem key={period.id} value={String(period.id)}>
+                  Kỳ #{period.id} · {formatShortDate(period.startAt)}
+                  {period.endAt ? ` - ${formatShortDate(period.endAt)}` : ''}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
         {/* Quick preset chips */}
         <div className="flex gap-2 overflow-x-auto scrollbar-none pb-0.5">
           {PRESETS.map((p) => {

@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { getDashboardStats } from '@/services/dashboard.service';
 import { getAllInventories } from '@/services/inventory.service';
+import { getCurrentAccountingPeriodOrNull } from '@/services/accounting-period.service';
 import { MobileDashboardClient } from './_components/mobile-dashboard-client';
 
 export const dynamic = 'force-dynamic';
@@ -13,15 +14,24 @@ export default async function MobileDashboardPage({ searchParams }: Props) {
   const { inv } = await searchParams;
   const inventoryId = inv ? Number(inv) : undefined;
 
-  const [inventories] = await Promise.all([
+  const [inventories, activePeriod] = await Promise.all([
     getAllInventories(),
+    getCurrentAccountingPeriodOrNull(),
   ]);
-  const statsPromise = getDashboardStats(inventoryId);
+  const statsPromise = getDashboardStats(inventoryId, activePeriod?.id);
 
   return (
     <div className="space-y-0">
       <Suspense fallback={<DashboardSkeleton />}>
-        <DashboardData statsPromise={statsPromise} inventories={inventories} selectedInventoryId={inventoryId} />
+        <DashboardData
+          statsPromise={statsPromise}
+          inventories={inventories}
+          selectedInventoryId={inventoryId}
+          activePeriod={activePeriod ? {
+            id: activePeriod.id,
+            startLabel: new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short' }).format(activePeriod.startAt),
+          } : null}
+        />
       </Suspense>
     </div>
   );
@@ -31,13 +41,22 @@ async function DashboardData({
   statsPromise,
   inventories,
   selectedInventoryId,
+  activePeriod,
 }: {
   statsPromise: ReturnType<typeof getDashboardStats>;
   inventories: Awaited<ReturnType<typeof getAllInventories>>;
   selectedInventoryId?: number;
+  activePeriod: { id: number; startLabel: string } | null;
 }) {
   const stats = await statsPromise;
-  return <MobileDashboardClient stats={stats} inventories={inventories} selectedInventoryId={selectedInventoryId} />;
+  return (
+    <MobileDashboardClient
+      stats={stats}
+      inventories={inventories}
+      selectedInventoryId={selectedInventoryId}
+      activePeriod={activePeriod}
+    />
+  );
 }
 
 function DashboardSkeleton() {

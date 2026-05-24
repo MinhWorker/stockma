@@ -10,10 +10,13 @@ async function main() {
 
   // Delete in reverse dependency order
   await prisma.activityLog.deleteMany();
+  await prisma.periodDebtBalance.deleteMany();
+  await prisma.periodInventoryBalance.deleteMany();
   await prisma.debtPayment.deleteMany();
   await prisma.debtGroup.deleteMany();
   await prisma.stockTransaction.deleteMany();
   await prisma.returnTransaction.deleteMany();
+  await prisma.accountingPeriod.deleteMany();
   await prisma.productVariant.deleteMany();
   await prisma.product.deleteMany();
   await prisma.productCategory.deleteMany();
@@ -26,6 +29,15 @@ async function main() {
   const user = await prisma.user.findFirst({ select: { id: true } });
   if (!user) throw new Error('No user found. Run prisma/seed.ts first.');
   const uid = user.id;
+
+  const activePeriod = await prisma.accountingPeriod.create({
+    data: {
+      name: 'Kỳ kế toán mẫu',
+      startAt: new Date('2026-05-01T00:00:00.000Z'),
+      status: 'open',
+      createdById: uid,
+    },
+  });
 
   // ── Categories ───────────────────────────────────────────────────────────
   console.log('📂 Seeding categories...');
@@ -169,7 +181,7 @@ async function main() {
     return prisma.stockTransaction.create({
       data: {
         type: 'stock_in', quantity: qty, stockBefore: before, stockAfter: before + qty,
-        productId, userId: uid, purchasePrice,
+        productId, userId: uid, purchasePrice, accountingPeriodId: activePeriod.id,
         ...(variantId ? { variantId } : {}),
       },
     });
@@ -184,6 +196,7 @@ async function main() {
       data: {
         type: 'stock_out', quantity: -qty, stockBefore: before, stockAfter: before - qty,
         productId, userId: uid, stockOutType: 'retail', salePrice, note: note ?? null,
+        accountingPeriodId: activePeriod.id,
         ...(variantId ? { variantId } : {}),
       },
     });
@@ -234,12 +247,13 @@ async function main() {
     data: {
       type: 'stock_out', quantity: -10, stockBefore: traSuaBefore, stockAfter: traSuaBefore - 10,
       productId: traSua.id, userId: uid, stockOutType: 'wholesale', salePrice: 40000,
+      accountingPeriodId: activePeriod.id,
     },
   });
   await prisma.debtGroup.create({
     data: {
       transactionId: debtTx.id, debtorName: 'Quán Cà Phê Bình Minh',
-      totalAmount: 400000, paidAmount: 100000, status: 'open',
+      totalAmount: 400000, paidAmount: 100000, initialPaidAmount: 100000, status: 'open',
     },
   });
 
@@ -252,12 +266,13 @@ async function main() {
     data: {
       type: 'stock_out', quantity: -5, stockBefore: sonBefore, stockAfter: sonBefore - 5,
       productId: son_moi.id, userId: uid, stockOutType: 'retail', salePrice: 320000,
+      accountingPeriodId: activePeriod.id,
     },
   });
   await prisma.debtGroup.create({
     data: {
       transactionId: debtTx2.id, debtorName: 'Chị Lan',
-      totalAmount: 1600000, paidAmount: 1600000, status: 'closed',
+      totalAmount: 1600000, paidAmount: 1600000, initialPaidAmount: 1600000, status: 'closed',
     },
   });
 
@@ -273,6 +288,7 @@ async function main() {
     data: {
       productId: banh.id, returnQty: 5, replacementQty: 5,
       purchasePrice: 8000, note: 'Bánh hết hạn, đổi lô mới', userId: uid,
+      accountingPeriodId: activePeriod.id,
     },
   });
   // stock_out for returned items
@@ -280,6 +296,7 @@ async function main() {
     data: {
       type: 'stock_out', quantity: -5, stockBefore: banhBefore, stockAfter: banhBefore - 5,
       productId: banh.id, userId: uid, returnTransactionId: returnTx.id,
+      accountingPeriodId: activePeriod.id,
     },
   });
   // stock_in for replacements
@@ -287,6 +304,7 @@ async function main() {
     data: {
       type: 'stock_in', quantity: 5, stockBefore: banhBefore - 5, stockAfter: banhBefore,
       productId: banh.id, userId: uid, purchasePrice: 8000, returnTransactionId: returnTx.id,
+      accountingPeriodId: activePeriod.id,
     },
   });
 

@@ -9,6 +9,15 @@ vi.mock('@/lib/db', () => ({
       groupBy: vi.fn(),
       findMany: vi.fn(),
     },
+    accountingPeriod: {
+      findFirst: vi.fn(),
+    },
+    periodInventoryBalance: {
+      groupBy: vi.fn(),
+    },
+    debtPayment: {
+      findMany: vi.fn(),
+    },
     debtGroup: {
       findMany: vi.fn(),
     },
@@ -33,13 +42,16 @@ describe('overview report profit calculation', () => {
     asMock(mockedPrisma.product.findMany).mockResolvedValue([
       { id: 1, costPrice: 100 },
     ]);
+    asMock(mockedPrisma.accountingPeriod.findFirst).mockResolvedValue(null);
+    asMock(mockedPrisma.periodInventoryBalance.groupBy).mockResolvedValue([]);
+    asMock(mockedPrisma.debtPayment.findMany).mockResolvedValue([]);
     asMock(mockedPrisma.stockTransaction.groupBy)
-      .mockResolvedValueOnce([
-        { productId: 1, _sum: { quantity: 8 } },
-      ])
       .mockResolvedValueOnce([
         { type: 'stock_in', _sum: { quantity: 10 }, _count: { id: 1 } },
         { type: 'stock_out', _sum: { quantity: -2 }, _count: { id: 1 } },
+      ])
+      .mockResolvedValueOnce([
+        { productId: 1, _sum: { quantity: 8 } },
       ]);
     asMock(mockedPrisma.stockTransaction.findMany)
       .mockResolvedValueOnce([
