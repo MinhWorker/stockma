@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 interface TransactionDoneStateProps {
   title: string;
   subtitle: string;
+  resetLabel?: string;
+  closeLabel?: string;
   onReset: () => void;
   onClose: () => void;
 }
@@ -14,6 +16,8 @@ interface TransactionDoneStateProps {
 export function TransactionDoneState({
   title,
   subtitle,
+  resetLabel,
+  closeLabel,
   onReset,
   onClose,
 }: TransactionDoneStateProps) {
@@ -29,10 +33,10 @@ export function TransactionDoneState({
       </div>
       <div className="flex gap-3">
         <Button variant="outline" className="min-h-[44px]" onClick={onClose}>
-          {tCommon('close')}
+          {closeLabel ?? tCommon('close')}
         </Button>
         <Button className="min-h-[44px]" onClick={onReset}>
-          {t('newTransaction')}
+          {resetLabel ?? t('newTransaction')}
         </Button>
       </div>
     </div>

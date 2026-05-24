@@ -39,10 +39,14 @@ export function useDebouncedUrlParam(
       selfWriteRef.current = false;
       return;
     }
-    setInputValueState((currentValue) => {
-      const normalizedCurrent = normalizeValue ? normalizeValue(currentValue) : currentValue;
-      return normalizedCurrent === urlValue ? currentValue : rawUrlValue;
-    });
+    const syncTimer = setTimeout(() => {
+      setInputValueState((currentValue) => {
+        const normalizedCurrent = normalizeValue ? normalizeValue(currentValue) : currentValue;
+        return normalizedCurrent === urlValue ? currentValue : rawUrlValue;
+      });
+    }, 0);
+
+    return () => clearTimeout(syncTimer);
   }, [rawUrlValue, urlValue, normalizeValue]);
 
   const setInputValue = useCallback(

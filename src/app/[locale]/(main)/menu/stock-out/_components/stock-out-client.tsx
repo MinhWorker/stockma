@@ -2,7 +2,7 @@
 
 import { useCallback, useId, useState } from 'react';
 import { useRouter } from '@/i18n/routing';
-import { Loader2, Plus, Trash2 } from 'lucide-react';
+import { CreditCard, Gift, Loader2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
@@ -66,9 +66,17 @@ export function StockOutClient() {
 
   const productState = useInventoryProductState();
   const {
-    productId, setProductId, variantId, setVariantId, products,
-    productSearch, setProductSearch, selectedProduct, hasVariants,
-    selectedVariant, resetProduct,
+    productId,
+    setProductId,
+    variantId,
+    setVariantId,
+    products,
+    productSearch,
+    setProductSearch,
+    selectedProduct,
+    hasVariants,
+    selectedVariant,
+    resetProduct,
   } = productState;
 
   const [quantity, setQuantity] = useState<number>(1);
@@ -78,6 +86,7 @@ export function StockOutClient() {
 
   // Gift items
   const [gifts, setGifts] = useState<GiftItemState[]>([]);
+  const [showDebtFields, setShowDebtFields] = useState(false);
 
   // Debt fields
   const [debtorName, setDebtorName] = useState('');
@@ -109,7 +118,7 @@ export function StockOutClient() {
   }
 
   function updateGift(id: string, patch: Partial<GiftItemState>) {
-    setGifts((prev) => prev.map((g) => g.id === id ? { ...g, ...patch } : g));
+    setGifts((prev) => prev.map((g) => (g.id === id ? { ...g, ...patch } : g)));
   }
 
   const handleSubmit = useCallback(async () => {
@@ -148,7 +157,10 @@ export function StockOutClient() {
           debtorName: isRetailOrWholesale && debtorName ? debtorName : undefined,
           paidAmount: isRetailOrWholesale && paidAmount ? Number(paidAmount) : undefined,
         });
-        if (!result.success) { toast.error(tCommon(getErrorKey(result.error))); return; }
+        if (!result.success) {
+          toast.error(tCommon(getErrorKey(result.error)));
+          return;
+        }
         toast.success(t('submitSuccess'));
         setDone(true);
       } catch {
@@ -158,8 +170,21 @@ export function StockOutClient() {
       }
     });
   }, [
-    productId, quantity, note, stockOutType, variantId, salePrice,
-    gifts, debtorName, paidAmount, isRetailOrWholesale, session, t, tCommon, hasVariants, withLoading,
+    productId,
+    quantity,
+    note,
+    stockOutType,
+    variantId,
+    salePrice,
+    gifts,
+    debtorName,
+    paidAmount,
+    isRetailOrWholesale,
+    session,
+    t,
+    tCommon,
+    hasVariants,
+    withLoading,
   ]);
 
   function handleReset() {
@@ -169,6 +194,7 @@ export function StockOutClient() {
     setStockOutType('');
     setSalePrice('');
     setGifts([]);
+    setShowDebtFields(false);
     setDebtorName('');
     setPaidAmount('');
     setErrors({});
@@ -186,6 +212,8 @@ export function StockOutClient() {
       <TransactionDoneState
         title={t('submitSuccess')}
         subtitle={t('tabs.stockOut')}
+        resetLabel="Xuất thêm hàng"
+        closeLabel="Về trang chủ"
         onReset={handleReset}
         onClose={handleClose}
       />
@@ -204,6 +232,7 @@ export function StockOutClient() {
             // Reset gift/debt when switching to transfer
             if (v === 'transfer') {
               setGifts([]);
+              setShowDebtFields(false);
               setDebtorName('');
               setPaidAmount('');
             }
@@ -227,7 +256,10 @@ export function StockOutClient() {
           productId={productId}
           productSearch={productSearch}
           onProductChange={handleProductChange}
-          onSearchChange={(s) => { setProductSearch(s); if (!s) handleProductChange(0); }}
+          onSearchChange={(s) => {
+            setProductSearch(s);
+            if (!s) handleProductChange(0);
+          }}
           error={!!errors.productId}
         />
         {selectedProduct && (
@@ -253,6 +285,11 @@ export function StockOutClient() {
           getPrice={(v) => v.effectivePrice}
         />
       )}
+      {hasVariants && !variantId && (
+        <p className="-mt-2 text-xs leading-relaxed text-muted-foreground">
+          Chọn đúng phân loại hàng cần xuất để hệ thống kiểm tra tồn kho và giá bán.
+        </p>
+      )}
 
       {/* Quantity */}
       <FormField label={t('form.quantity')} required error={errors.quantity} htmlFor={quantityId}>
@@ -273,11 +310,17 @@ export function StockOutClient() {
 
       {/* Sale price — only for retail/wholesale */}
       {isRetailOrWholesale && (
-        <FormField label="Giá bán">
+        <FormField label="Giá bán" description="Để trống nếu dùng giá bán mặc định của sản phẩm.">
           <PriceInput
             value={salePrice}
             onChange={(v) => setSalePrice(String(v || ''))}
-            placeholder={effectivePrice != null ? `Mặc định: ${effectivePrice.toLocaleString()}` : 'Giá bán (tùy chọn)'}
+            placeholder={
+              hasVariants && !variantId
+                ? 'Chọn phân loại để xem giá bán mặc định'
+                : effectivePrice != null
+                  ? `Mặc định: ${effectivePrice.toLocaleString()}`
+                  : 'Giá bán (tùy chọn)'
+            }
           />
         </FormField>
       )}
@@ -296,20 +339,24 @@ export function StockOutClient() {
       {/* Gift items — only for retail/wholesale */}
       {isRetailOrWholesale && (
         <div className="space-y-2 border-t pt-3">
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-medium">Tặng phẩm</p>
+          <div className="flex items-center justify-between gap-3">
+            <div className="space-y-0.5">
+              <p className="text-sm font-medium">Hàng tặng kèm</p>
+              <p className="text-xs text-muted-foreground">Chỉ thêm khi đơn xuất có hàng tặng.</p>
+            </div>
             <Button size="sm" variant="outline" onClick={addGift}>
-              <Plus className="h-3 w-3 mr-1" />
-              Thêm
+              <Gift className="h-3.5 w-3.5" />
+              Thêm hàng tặng
             </Button>
           </div>
           {gifts.map((gift) => {
             const giftProduct = products.find((p) => p.id === gift.productId);
             const giftHasVariants = (giftProduct?.variants?.length ?? 0) > 0;
             const giftVariant = giftProduct?.variants?.find((v) => v.id === gift.variantId);
-            const giftProductInputValue = gift.productId && !gift.productSearch
-              ? (giftProduct?.name ?? '')
-              : gift.productSearch;
+            const giftProductInputValue =
+              gift.productId && !gift.productSearch
+                ? (giftProduct?.name ?? '')
+                : gift.productSearch;
             const filteredGiftVariants = gift.variantSearch
               ? (giftProduct?.variants ?? []).filter((v) =>
                   v.name.toLowerCase().includes(gift.variantSearch.toLowerCase())
@@ -319,10 +366,16 @@ export function StockOutClient() {
             return (
               <div key={gift.id} className="rounded-md border p-3 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">Tặng phẩm</span>
+                  <div>
+                    <span className="text-xs font-medium">Hàng tặng</span>
+                    <p className="text-xs text-muted-foreground">
+                      Nếu không cần, hãy xóa dòng này.
+                    </p>
+                  </div>
                   <Button
                     size="icon"
                     variant="ghost"
+                    aria-label="Xóa hàng tặng"
                     className="h-6 w-6 text-destructive"
                     onClick={() => removeGift(gift.id)}
                   >
@@ -373,9 +426,11 @@ export function StockOutClient() {
                   >
                     <ComboboxInput
                       placeholder="Phân loại (tùy chọn)..."
-                      value={gift.variantId && !gift.variantSearch
-                        ? (giftVariant?.name ?? '')
-                        : gift.variantSearch}
+                      value={
+                        gift.variantId && !gift.variantSearch
+                          ? (giftVariant?.name ?? '')
+                          : gift.variantSearch
+                      }
                       onChange={(e) => {
                         updateGift(gift.id, { variantSearch: e.target.value });
                         if (!e.target.value) updateGift(gift.id, { variantId: undefined });
@@ -409,27 +464,58 @@ export function StockOutClient() {
       {/* Debt section — only for retail/wholesale */}
       {isRetailOrWholesale && (
         <div className="space-y-3 border-t pt-3">
-          <p className="text-sm font-medium">Ghi nợ (tùy chọn)</p>
-          <FormField label="Tên khách nợ">
-            <Input
-              value={debtorName}
-              onChange={(e) => setDebtorName(e.target.value)}
-              placeholder="Tên khách hàng..."
-            />
-          </FormField>
-          <FormField label="Đã thanh toán">
-            <PriceInput
-              value={paidAmount}
-              onChange={(v) => setPaidAmount(String(v || ''))}
-              placeholder="Số tiền đã trả (0 = chưa trả)"
-            />
-          </FormField>
+          <div className="flex items-center justify-between gap-3">
+            <div className="space-y-0.5">
+              <p className="text-sm font-medium">Ghi nợ</p>
+              <p className="text-xs text-muted-foreground">Chỉ điền khi khách chưa trả đủ tiền.</p>
+            </div>
+            {!showDebtFields && (
+              <Button size="sm" variant="outline" onClick={() => setShowDebtFields(true)}>
+                <CreditCard className="h-3.5 w-3.5" />
+                Ghi nợ cho khách
+              </Button>
+            )}
+          </div>
+          {showDebtFields && (
+            <div className="space-y-3 rounded-md border p-3">
+              <FormField label="Tên khách nợ" description="Nhập tên người hoặc đơn vị còn nợ tiền.">
+                <Input
+                  value={debtorName}
+                  onChange={(e) => setDebtorName(e.target.value)}
+                  placeholder="Tên khách hàng..."
+                />
+              </FormField>
+              <FormField
+                label="Đã thanh toán"
+                description="Nhập số tiền khách đã trả; để trống nếu chưa trả."
+              >
+                <PriceInput
+                  value={paidAmount}
+                  onChange={(v) => setPaidAmount(String(v || ''))}
+                  placeholder="Số tiền đã trả"
+                />
+              </FormField>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="w-full"
+                onClick={() => {
+                  setShowDebtFields(false);
+                  setDebtorName('');
+                  setPaidAmount('');
+                }}
+              >
+                Bỏ ghi nợ
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
       <Button className="w-full" size="lg" onClick={handleSubmit} disabled={isSubmitting}>
         {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-        {isSubmitting ? tCommon('submitting') : tCommon('save')}
+        {isSubmitting ? tCommon('submitting') : 'Ghi nhận xuất kho'}
       </Button>
     </div>
   );

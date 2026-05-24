@@ -2,13 +2,21 @@ import { useId } from 'react';
 
 interface FormFieldProps {
   label: string;
+  description?: string;
   required?: boolean;
   error?: string;
   htmlFor?: string;
   children: React.ReactNode;
 }
 
-export function FormField({ label, required, error, htmlFor, children }: FormFieldProps) {
+export function FormField({
+  label,
+  description,
+  required,
+  error,
+  htmlFor,
+  children,
+}: FormFieldProps) {
   const generatedId = useId();
   const fieldId = htmlFor ?? generatedId;
 
@@ -25,6 +33,9 @@ export function FormField({ label, required, error, htmlFor, children }: FormFie
           </span>
         )}
       </label>
+      {description && (
+        <p className="text-xs leading-relaxed text-muted-foreground">{description}</p>
+      )}
       <div
         aria-invalid={!!error}
         data-invalid={!!error || undefined}

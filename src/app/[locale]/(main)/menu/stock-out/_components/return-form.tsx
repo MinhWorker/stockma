@@ -27,8 +27,15 @@ export function ReturnForm() {
 
   const productState = useInventoryProductState();
   const {
-    productId, setProductId, variantId, setVariantId, products,
-    productSearch, setProductSearch, selectedProduct, hasVariants,
+    productId,
+    setProductId,
+    variantId,
+    setVariantId,
+    products,
+    productSearch,
+    setProductSearch,
+    selectedProduct,
+    hasVariants,
     resetProduct,
   } = productState;
 
@@ -57,7 +64,7 @@ export function ReturnForm() {
     if (!productId) e.productId = tCommon('required');
     if (rQty < 0) e.returnQty = 'Phải >= 0';
     if (repQty < 0) e.replacementQty = 'Phải >= 0';
-    if (rQty + repQty === 0) e.returnQty = 'Tổng số lượng phải > 0';
+    if (rQty + repQty === 0) e.returnQty = 'Nhập ít nhất một số lượng trả hoặc số lượng đổi';
 
     if (Object.keys(e).filter((k) => e[k]).length) {
       setErrors(e);
@@ -75,7 +82,10 @@ export function ReturnForm() {
           purchasePrice: purchasePrice ? Number(purchasePrice) : undefined,
           note: note || undefined,
         });
-        if (!result.success) { toast.error(tCommon(getErrorKey(result.error))); return; }
+        if (!result.success) {
+          toast.error(tCommon(getErrorKey(result.error)));
+          return;
+        }
         toast.success('Ghi nhận đổi trả thành công');
         setDone(true);
       } catch {
@@ -101,6 +111,8 @@ export function ReturnForm() {
       <TransactionDoneState
         title="Ghi nhận đổi trả thành công"
         subtitle=""
+        resetLabel="Ghi nhận đổi trả tiếp"
+        closeLabel="Quay lại"
         onReset={handleReset}
         onClose={() => window.history.back()}
       />
@@ -116,7 +128,10 @@ export function ReturnForm() {
           productId={productId}
           productSearch={productSearch}
           onProductChange={handleProductChange}
-          onSearchChange={(s) => { setProductSearch(s); if (!s) handleProductChange(0); }}
+          onSearchChange={(s) => {
+            setProductSearch(s);
+            if (!s) handleProductChange(0);
+          }}
           error={!!errors.productId}
         />
       </FormField>
@@ -137,7 +152,13 @@ export function ReturnForm() {
       )}
 
       {/* Return qty */}
-      <FormField label="Số lượng trả" required error={errors.returnQty} htmlFor={returnQtyId}>
+      <FormField
+        label="Số lượng trả"
+        required
+        error={errors.returnQty}
+        htmlFor={returnQtyId}
+        description="Hàng khách trả lại hoặc kho nhận lại."
+      >
         <Input
           id={returnQtyId}
           type="number"
@@ -153,7 +174,13 @@ export function ReturnForm() {
       </FormField>
 
       {/* Replacement qty */}
-      <FormField label="Số lượng đổi" required error={errors.replacementQty} htmlFor={replacementQtyId}>
+      <FormField
+        label="Số lượng đổi"
+        required
+        error={errors.replacementQty}
+        htmlFor={replacementQtyId}
+        description="Hàng mới xuất bù cho khách. Nếu chỉ nhận trả, để 0."
+      >
         <Input
           id={replacementQtyId}
           type="number"
@@ -169,7 +196,11 @@ export function ReturnForm() {
       </FormField>
 
       {/* Purchase price — optional */}
-      <FormField label="Giá nhập hàng đổi" htmlFor={purchasePriceId}>
+      <FormField
+        label="Giá nhập hàng đổi"
+        htmlFor={purchasePriceId}
+        description="Để trống nếu dùng giá nhập mặc định."
+      >
         <PriceInput
           id={purchasePriceId}
           value={purchasePrice}

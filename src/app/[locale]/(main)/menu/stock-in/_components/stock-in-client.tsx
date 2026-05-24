@@ -30,9 +30,17 @@ export function StockInClient() {
 
   const productState = useInventoryProductState();
   const {
-    productId, setProductId, variantId, setVariantId, products,
-    productSearch, setProductSearch, selectedProduct, hasVariants,
-    selectedVariant, resetProduct,
+    productId,
+    setProductId,
+    variantId,
+    setVariantId,
+    products,
+    productSearch,
+    setProductSearch,
+    selectedProduct,
+    hasVariants,
+    selectedVariant,
+    resetProduct,
   } = productState;
 
   const [quantity, setQuantity] = useState<number>(1);
@@ -76,7 +84,10 @@ export function StockInClient() {
           variantId,
           purchasePrice: purchasePrice ? Number(purchasePrice) : undefined,
         });
-        if (!result.success) { toast.error(tCommon(getErrorKey(result.error))); return; }
+        if (!result.success) {
+          toast.error(tCommon(getErrorKey(result.error)));
+          return;
+        }
         toast.success(t('submitSuccess'));
         setDone(true);
       } catch {
@@ -85,7 +96,18 @@ export function StockInClient() {
         setIsSubmitting(false);
       }
     });
-  }, [productId, quantity, note, variantId, purchasePrice, hasVariants, session, t, tCommon, withLoading]);
+  }, [
+    productId,
+    quantity,
+    note,
+    variantId,
+    purchasePrice,
+    hasVariants,
+    session,
+    t,
+    tCommon,
+    withLoading,
+  ]);
 
   function handleReset() {
     resetProduct();
@@ -107,6 +129,8 @@ export function StockInClient() {
       <TransactionDoneState
         title={t('submitSuccess')}
         subtitle={t('tabs.stockIn')}
+        resetLabel="Nhập thêm hàng"
+        closeLabel="Về trang chủ"
         onReset={handleReset}
         onClose={handleClose}
       />
@@ -121,7 +145,10 @@ export function StockInClient() {
           productId={productId}
           productSearch={productSearch}
           onProductChange={handleProductChange}
-          onSearchChange={(s) => { setProductSearch(s); if (!s) handleProductChange(0); }}
+          onSearchChange={(s) => {
+            setProductSearch(s);
+            if (!s) handleProductChange(0);
+          }}
           error={!!errors.productId}
           addNewHref="/menu/products/new?back=/menu/stock-in"
         />
@@ -147,6 +174,11 @@ export function StockInClient() {
           getPrice={(v) => v.effectiveCostPrice}
         />
       )}
+      {hasVariants && !variantId && (
+        <p className="-mt-2 text-xs leading-relaxed text-muted-foreground">
+          Chọn đúng phân loại hàng cần nhập, ví dụ dung tích hoặc quy cách.
+        </p>
+      )}
 
       <FormField label={t('form.quantity')} required error={errors.quantity} htmlFor={quantityId}>
         <Input
@@ -164,13 +196,20 @@ export function StockInClient() {
         />
       </FormField>
 
-      <FormField label={t('form.purchasePrice')}>
+      <FormField
+        label={t('form.purchasePrice')}
+        description="Để trống nếu dùng giá nhập mặc định của sản phẩm."
+      >
         <PriceInput
           value={purchasePrice}
           onChange={(v) => setPurchasePrice(String(v || ''))}
-          placeholder={effectiveCostPrice != null
-            ? `${t('form.purchasePriceDefault')}: ${effectiveCostPrice.toLocaleString()}`
-            : t('form.purchasePricePlaceholder')}
+          placeholder={
+            hasVariants && !variantId
+              ? 'Chọn phân loại để xem giá nhập mặc định'
+              : effectiveCostPrice != null
+                ? `${t('form.purchasePriceDefault')}: ${effectiveCostPrice.toLocaleString()}`
+                : t('form.purchasePricePlaceholder')
+          }
         />
       </FormField>
 
@@ -186,7 +225,7 @@ export function StockInClient() {
 
       <Button className="w-full" size="lg" onClick={handleSubmit} disabled={isSubmitting}>
         {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-        {isSubmitting ? tCommon('submitting') : tCommon('save')}
+        {isSubmitting ? tCommon('submitting') : 'Ghi nhận nhập kho'}
       </Button>
     </div>
   );
