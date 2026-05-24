@@ -13,6 +13,10 @@
     "test": "vitest --run",
     "test:watch": "vitest",
     "verify:ux": "node scripts/verify-ux.mjs",
+    "rollout:accounting-periods:backup": "tsx scripts/backup-production-db.ts",
+    "rollout:accounting-periods:preflight": "tsx scripts/accounting-period-rollout.ts preflight",
+    "rollout:accounting-periods:backfill": "tsx scripts/accounting-period-rollout.ts backfill",
+    "rollout:accounting-periods:verify": "tsx scripts/accounting-period-rollout.ts verify",
     "shadcn:add": "npx shadcn@latest` add",
     "postinstall": "prisma generate",
     "seed": "tsx prisma/seed.ts"
