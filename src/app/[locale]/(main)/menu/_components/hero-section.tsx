@@ -1,17 +1,6 @@
-import { getTranslations } from 'next-intl/server';
+import { Suspense } from 'react';
 import { getSession } from '@/lib/session';
-
-async function getDbUsage(): Promise<{ percent: number; usedBytes: number; totalBytes: number } | null> {
-  try {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/db-usage`, {
-      next: { revalidate: 3600 },
-    });
-    if (!res.ok) return null;
-    return res.json();
-  } catch {
-    return null;
-  }
-}
+import { getCachedDbUsage } from '@/lib/db-usage';
 
 function formatBytes(bytes: number) {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
@@ -40,26 +29,56 @@ function UsageRing({ percent }: { percent: number }) {
   );
 }
 
-export async function HeroSection() {
-  const t = await getTranslations('menu');
-  const [session, usage] = await Promise.all([getSession(), getDbUsage()]);
+async function UserName({ fallback }: { fallback: string }) {
+  const session = await getSession();
   const name = session?.user?.name?.split(' ').at(-1) ?? null;
 
+  return <p className="text-base font-semibold truncate">{name ?? fallback}</p>;
+}
+
+async function DbUsageMeter() {
+  const usage = await getCachedDbUsage().catch(() => null);
+
+  if (!usage) return null;
+
+  return (
+    <div className="flex flex-col items-center gap-1 shrink-0 ml-4">
+      <UsageRing percent={usage.percent} />
+      <p className="text-[10px] text-muted-foreground tabular-nums">
+        {formatBytes(usage.usedBytes)} / {formatBytes(usage.totalBytes)}
+      </p>
+    </div>
+  );
+}
+
+function DbUsageSkeleton() {
+  return (
+    <div className="flex flex-col items-center gap-1 shrink-0 ml-4">
+      <div className="h-16 w-16 rounded-full animate-shimmer" />
+      <div className="h-2.5 w-20 rounded animate-shimmer" />
+    </div>
+  );
+}
+
+type HeroSectionProps = {
+  heroGreeting: string;
+  title: string;
+  subtitle: string;
+};
+
+export function HeroSection({ heroGreeting, title, subtitle }: HeroSectionProps) {
   return (
     <div className="flex items-center justify-between rounded-2xl bg-muted/40 border border-border/60 px-4 py-3.5">
       <div className="space-y-0.5 min-w-0">
-        <p className="text-xs text-muted-foreground">{t('heroGreeting')}</p>
-        <p className="text-base font-semibold truncate">{name ?? t('title')}</p>
-        <p className="text-xs text-muted-foreground">{t('subtitle')}</p>
+        <p className="text-xs text-muted-foreground">{heroGreeting}</p>
+        <Suspense fallback={<p className="text-base font-semibold truncate">{title}</p>}>
+          <UserName fallback={title} />
+        </Suspense>
+        <p className="text-xs text-muted-foreground">{subtitle}</p>
       </div>
-      {usage && (
-        <div className="flex flex-col items-center gap-1 shrink-0 ml-4">
-          <UsageRing percent={usage.percent} />
-          <p className="text-[10px] text-muted-foreground tabular-nums">
-            {formatBytes(usage.usedBytes)} / {formatBytes(usage.totalBytes)}
-          </p>
-        </div>
-      )}
+      <Suspense fallback={<DbUsageSkeleton />}>
+        <DbUsageMeter />
+      </Suspense>
     </div>
   );
 }

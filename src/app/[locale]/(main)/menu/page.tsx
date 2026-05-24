@@ -1,5 +1,4 @@
 import { getTranslations } from 'next-intl/server';
-import { Suspense } from 'react';
 import { BackPressGuard } from './_components/back-press-guard';
 import { PageTransition } from '@/components/page-transition';
 import { HeroSection } from './_components/hero-section';
@@ -16,9 +15,11 @@ export default async function MenuPage() {
         <BackPressGuard message={t('backPressToExit')} />
 
         {/* Hero */}
-        <Suspense fallback={<HeroSkeleton />}>
-          <HeroSection />
-        </Suspense>
+        <HeroSection
+          heroGreeting={t('heroGreeting')}
+          title={t('title')}
+          subtitle={t('subtitle')}
+        />
 
         {/* Primary actions — thumb zone */}
         <PrimaryActionsSection
@@ -56,18 +57,5 @@ export default async function MenuPage() {
         </section>
       </div>
     </PageTransition>
-  );
-}
-
-function HeroSkeleton() {
-  return (
-    <div className="flex items-center justify-between rounded-2xl bg-muted/40 border border-border/60 px-4 py-3.5">
-      <div className="space-y-2 flex-1">
-        <div className="h-2.5 w-16 rounded animate-shimmer" />
-        <div className="h-4 w-28 rounded animate-shimmer" />
-        <div className="h-2.5 w-36 rounded animate-shimmer" />
-      </div>
-      <div className="h-16 w-16 rounded-full animate-shimmer shrink-0 ml-4" />
-    </div>
   );
 }
