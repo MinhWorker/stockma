@@ -9,8 +9,8 @@ type LocaleLinkProps = Omit<LinkProps, 'href'> &
     href: string;
   };
 
-export function LocaleLink({ href, ...props }: LocaleLinkProps) {
+export function LocaleLink({ href, prefetch = false, ...props }: LocaleLinkProps) {
   const locale = useLocale();
   const localizedHref = href.startsWith('/') ? `/${locale}${href}` : href;
-  return <NextLink href={localizedHref} {...props} />;
+  return <NextLink href={localizedHref} prefetch={prefetch} {...props} />;
 }

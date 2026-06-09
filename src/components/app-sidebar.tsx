@@ -63,7 +63,7 @@ export function AppSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild tooltip="STOCKMA">
-              <Link href="/dashboard">
+              <Link href="/dashboard" prefetch={false}>
                 <Image src={logo} alt="logo" height={32} width={32} className="shrink-0" />
                 <span style={{ fontWeight: 'bold', fontSize: 'large', letterSpacing: 4 }}>
                   STOCKMA
@@ -86,7 +86,11 @@ export function AppSidebar() {
                       isActive={pathname.includes(item.href)}
                       tooltip={item.label}
                     >
-                      <Link href={item.href} onClick={() => isMobile && setOpenMobile(false)}>
+                      <Link
+                        href={item.href}
+                        prefetch={false}
+                        onClick={() => isMobile && setOpenMobile(false)}
+                      >
                         <item.icon />
                         <span>{item.label}</span>
                       </Link>
