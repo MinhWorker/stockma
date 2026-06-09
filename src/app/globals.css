@@ -190,28 +190,28 @@
 ::view-transition-old(.nav-forward) {
   --vt-slide-offset: -50px;
   animation:
-    150ms ease-in both vt-fade reverse,
-    400ms ease-in-out both vt-slide reverse;
+    120ms ease-in both vt-fade reverse,
+    180ms ease-in-out both vt-slide reverse;
 }
 ::view-transition-new(.nav-forward) {
   --vt-slide-offset: 50px;
   animation:
-    210ms ease-out 150ms both vt-fade,
-    400ms ease-in-out both vt-slide;
+    140ms ease-out 80ms both vt-fade,
+    180ms ease-in-out both vt-slide;
 }
 
 /* Back: old exits right, new enters from left */
 ::view-transition-old(.nav-back) {
   --vt-slide-offset: 50px;
   animation:
-    150ms ease-in both vt-fade reverse,
-    400ms ease-in-out both vt-slide reverse;
+    120ms ease-in both vt-fade reverse,
+    180ms ease-in-out both vt-slide reverse;
 }
 ::view-transition-new(.nav-back) {
   --vt-slide-offset: -50px;
   animation:
-    210ms ease-out 150ms both vt-fade,
-    400ms ease-in-out both vt-slide;
+    140ms ease-out 80ms both vt-fade,
+    180ms ease-in-out both vt-slide;
 }
 
 /* Respect reduced motion */
