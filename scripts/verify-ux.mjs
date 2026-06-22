@@ -66,14 +66,10 @@ async function verifyStockIn(page, rootUrl, results) {
 
 async function verifyStockOut(page, rootUrl, results) {
   await page.goto(`${rootUrl}/vi/menu/stock-out`, { waitUntil: 'networkidle', timeout: 45000 });
-  await assertVisible(page, 'Ghi nhận xuất kho', 'stock-out CTA');
+  await assertVisible(page, 'Xem lại phiếu xuất', 'stock-out review CTA');
 
-  const openedTypeSelect = await clickFirstVisible(page, ['Chọn loại xuất kho']);
-  if (openedTypeSelect) {
-    await page.waitForTimeout(300);
-    await clickFirstVisible(page, ['Bán lẻ', 'Ban le']);
-    await page.waitForTimeout(500);
-  }
+  await clickFirstVisible(page, ['Bán lẻ', 'Ban le']);
+  await page.waitForTimeout(500);
 
   await capture(page, 'stock-out-retail');
   await assertVisible(page, 'Thêm hàng tặng', 'retail gift action');

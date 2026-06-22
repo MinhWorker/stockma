@@ -6,16 +6,18 @@ import { useRouter } from '@/i18n/routing';
 import { toast } from 'sonner';
 import { Loader2, Trash2 } from 'lucide-react';
 import {
-  Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerFooter,
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerFooter,
 } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { PriceInput } from '@/components/forms/price-input';
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
+import { SegmentedSelect } from '@/components/forms/segmented-select';
 import { Separator } from '@/components/ui/separator';
 import { useOrder } from '../_context/order-context';
 import { createStockOutAction } from '@/actions/inventory.action';
@@ -42,6 +44,11 @@ export function OrderReviewDrawer() {
 
   const { items, global, reviewOpen } = state;
   const canDebt = global.stockOutType === 'retail' || global.stockOutType === 'wholesale';
+  const stockOutTypeOptions: { value: StockOutType; label: string; description: string }[] = [
+    { value: 'retail', label: t('stockOutTypes.retail'), description: 'Có giá bán' },
+    { value: 'wholesale', label: t('stockOutTypes.wholesale'), description: 'Có giá bán' },
+    { value: 'transfer', label: t('stockOutTypes.transfer'), description: 'Không tính tiền' },
+  ];
 
   // Reset debt toggle when switching to transfer
   function handleTypeChange(v: StockOutType) {
@@ -89,7 +96,8 @@ export function OrderReviewDrawer() {
             salePrice: item.salePrice ? Number(item.salePrice) : effectivePrice,
             note: global.note || undefined,
             debtorName: isDebt && canDebt && global.debtorName ? global.debtorName : undefined,
-            paidAmount: isDebt && canDebt && global.paidAmount ? Number(global.paidAmount) : undefined,
+            paidAmount:
+              isDebt && canDebt && global.paidAmount ? Number(global.paidAmount) : undefined,
             userId,
           });
           if (result.success) successCount++;
@@ -113,26 +121,32 @@ export function OrderReviewDrawer() {
       <Drawer open={reviewOpen} onOpenChange={(open) => !open && actions.closeReview()}>
         <DrawerContent className="max-h-[92vh]">
           <DrawerHeader>
-            <DrawerTitle>{t('itemsTitle')} ({items.length})</DrawerTitle>
+            <DrawerTitle>
+              {t('itemsTitle')} ({items.length})
+            </DrawerTitle>
           </DrawerHeader>
 
-          <div className="overflow-y-auto px-4 space-y-4 pb-2" inert={isSubmitting || isConfirmOpen || undefined}>
+          <div
+            className="overflow-y-auto px-4 space-y-4 pb-2"
+            inert={isSubmitting || isConfirmOpen || undefined}
+          >
             {/* Global fields */}
             <div className="space-y-3">
               {/* Stock-out type */}
               <div className="space-y-1">
-                <p className="text-sm font-medium">{t('stockOutType')} <span className="text-destructive">*</span></p>
-                <Select value={global.stockOutType} onValueChange={(v) => handleTypeChange(v as StockOutType)}>
-                  <SelectTrigger className={cn('w-full', errors.stockOutType && 'border-destructive')}>
-                    <SelectValue placeholder={t('stockOutTypePlaceholder')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="retail">{t('stockOutTypes.retail')}</SelectItem>
-                    <SelectItem value="wholesale">{t('stockOutTypes.wholesale')}</SelectItem>
-                    <SelectItem value="transfer">{t('stockOutTypes.transfer')}</SelectItem>
-                  </SelectContent>
-                </Select>
-                {errors.stockOutType && <p className="text-xs text-destructive">{errors.stockOutType}</p>}
+                <p className="text-sm font-medium">
+                  {t('stockOutType')} <span className="text-destructive">*</span>
+                </p>
+                <SegmentedSelect
+                  aria-label={t('stockOutType')}
+                  value={global.stockOutType}
+                  options={stockOutTypeOptions}
+                  onValueChange={handleTypeChange}
+                  error={!!errors.stockOutType}
+                />
+                {errors.stockOutType && (
+                  <p className="text-xs text-destructive">{errors.stockOutType}</p>
+                )}
               </div>
 
               {/* Debt toggle — only for retail/wholesale */}
@@ -195,14 +209,19 @@ export function OrderReviewDrawer() {
               {items.map((item) => {
                 const effectivePrice = item.variant?.effectivePrice ?? item.product.price;
                 return (
-                  <div key={item.key} className="rounded-xl border border-border bg-card p-3 space-y-3">
+                  <div
+                    key={item.key}
+                    className="rounded-xl border border-border bg-card p-3 space-y-3"
+                  >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <p className="text-sm font-medium truncate">{item.product.name}</p>
                         {item.variant && (
                           <p className="text-xs text-muted-foreground">{item.variant.name}</p>
                         )}
-                        <p className="text-xs text-muted-foreground">{formatPrice(effectivePrice)}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatPrice(effectivePrice)}
+                        </p>
                       </div>
                       <button
                         onClick={() => actions.removeItem(item.key)}
@@ -220,7 +239,10 @@ export function OrderReviewDrawer() {
                           min={1}
                           value={item.quantity}
                           onChange={(e) => actions.setQty(item.key, Number(e.target.value))}
-                          className={cn('h-8 text-sm', errors[`qty_${item.key}`] && 'border-destructive')}
+                          className={cn(
+                            'h-8 text-sm',
+                            errors[`qty_${item.key}`] && 'border-destructive'
+                          )}
                         />
                       </div>
                       {global.stockOutType !== 'transfer' && (
@@ -242,7 +264,12 @@ export function OrderReviewDrawer() {
           </div>
 
           <DrawerFooter className="flex-row gap-2">
-            <Button variant="outline" className="flex-1" onClick={actions.closeReview} disabled={isSubmitting}>
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={actions.closeReview}
+              disabled={isSubmitting}
+            >
               {tCommon('cancel')}
             </Button>
             <Button
@@ -268,4 +295,3 @@ export function OrderReviewDrawer() {
     </>
   );
 }
-
