@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { FormField } from '@/components/forms/form-field';
 import { PriceInput } from '@/components/forms/price-input';
-import { ProductCombobox } from '@/components/forms/product-combobox';
+import { ProductPickerPanel } from '@/components/forms/product-picker-panel';
 import { createTransactionAction } from '@/actions/inventory.action';
 import { useSession } from '@/lib/auth-client';
 import { getErrorKey } from '@/lib/error-message';
@@ -141,15 +141,12 @@ export function StockInClient() {
   return (
     <div className="space-y-4 px-4 py-4" inert={isSubmitting || undefined}>
       <FormField label={t('form.product')} required error={errors.productId}>
-        <ProductCombobox
+        <ProductPickerPanel
           products={products}
           productId={productId}
           productSearch={productSearch}
           onProductChange={handleProductChange}
-          onSearchChange={(s) => {
-            setProductSearch(s);
-            if (!s) handleProductChange(0);
-          }}
+          onSearchChange={setProductSearch}
           isLoading={isLoadingProducts}
           error={!!errors.productId}
           addNewHref="/menu/products/new?back=/menu/stock-in"

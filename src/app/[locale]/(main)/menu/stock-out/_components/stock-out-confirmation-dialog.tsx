@@ -13,6 +13,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatPrice } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
 import type { ProductSummary, StockOutType } from '@/services/types';
+import { ProductAvatar } from '@/components/data-display/product-avatar';
 
 interface GiftLine {
   id: string;
@@ -85,16 +86,26 @@ export function StockOutConfirmationDialog({
             <div className="divide-y divide-border overflow-hidden rounded-xl border">
               <div className="bg-card p-3">
                 <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium leading-tight">{product?.name}</p>
-                    {variantName && (
-                      <p className="mt-0.5 text-xs text-muted-foreground">{variantName}</p>
+                  <div className="flex min-w-0 items-start gap-3">
+                    {product && (
+                      <ProductAvatar
+                        name={product.name}
+                        imageUrl={product.imageUrl}
+                        categoryName={product.categoryName}
+                        size="sm"
+                      />
                     )}
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {isSale
-                        ? `${quantity} x ${formatPrice(effectivePrice)}`
-                        : `Số lượng chuyển: ${quantity}`}
-                    </p>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium leading-tight">{product?.name}</p>
+                      {variantName && (
+                        <p className="mt-0.5 text-xs text-muted-foreground">{variantName}</p>
+                      )}
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {isSale
+                          ? `${quantity} x ${formatPrice(effectivePrice)}`
+                          : `Số lượng chuyển: ${quantity}`}
+                      </p>
+                    </div>
                   </div>
                   {isSale && (
                     <p className="whitespace-nowrap text-sm font-semibold">{formatPrice(total)}</p>
@@ -124,11 +135,21 @@ export function StockOutConfirmationDialog({
                 <div className="space-y-2">
                   {gifts.map((gift) => (
                     <div key={gift.id} className="flex justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate font-medium">{gift.product?.name}</p>
-                        {gift.variantName && (
-                          <p className="text-xs text-muted-foreground">{gift.variantName}</p>
+                      <div className="flex min-w-0 items-center gap-2">
+                        {gift.product && (
+                          <ProductAvatar
+                            name={gift.product.name}
+                            imageUrl={gift.product.imageUrl}
+                            categoryName={gift.product.categoryName}
+                            size="sm"
+                          />
                         )}
+                        <div className="min-w-0">
+                          <p className="truncate font-medium">{gift.product?.name}</p>
+                          {gift.variantName && (
+                            <p className="text-xs text-muted-foreground">{gift.variantName}</p>
+                          )}
+                        </div>
                       </div>
                       <p className="whitespace-nowrap text-muted-foreground">x {gift.quantity}</p>
                     </div>

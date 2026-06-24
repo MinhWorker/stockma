@@ -5,6 +5,7 @@ import { getAccountingPeriods } from '@/services/accounting-period.service';
 import { ReportFilters } from '../_components/report-filters';
 import { InventoryBadge } from '../_components/inventory-badge';
 import { formatPrice } from '@/lib/utils';
+import { ProductAvatar } from '@/components/data-display/product-avatar';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,9 +50,17 @@ async function ProductsData({ inventoryId, dateFrom, dateTo, accountingPeriodId 
         {rows.map((row) => (
           <div key={row.productId} className="px-4 py-3 space-y-1.5">
             <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-sm font-medium truncate">{row.productName}</p>
-                <p className="text-xs text-muted-foreground">{row.categoryName}</p>
+              <div className="flex min-w-0 items-start gap-3">
+                <ProductAvatar
+                  name={row.productName}
+                  imageUrl={row.imageUrl}
+                  categoryName={row.categoryName}
+                  size="sm"
+                />
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">{row.productName}</p>
+                  <p className="text-xs text-muted-foreground">{row.categoryName}</p>
+                </div>
               </div>
               <div className="text-right shrink-0">
                 <p className="text-sm font-semibold tabular-nums">{t('stock')}: {row.stockQty}</p>

@@ -8,6 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatPrice } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
 import type { BulkStockInItem } from '../_context/bulk-stock-in-context';
+import { ProductAvatar } from '@/components/data-display/product-avatar';
 
 interface Props {
   open: boolean;
@@ -49,14 +50,22 @@ export function BulkStockInConfirmationDialog({
                 const price = item.purchasePrice ? Number(item.purchasePrice) : (item.variant?.effectiveCostPrice ?? item.product.costPrice);
                 return (
                   <div key={item.key} className="flex items-start justify-between gap-3 bg-card p-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium leading-tight">{item.product.name}</p>
-                      {item.variant && (
-                        <p className="mt-0.5 text-xs text-muted-foreground">{item.variant.name}</p>
-                      )}
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {item.quantity} x {formatPrice(price)}
-                      </p>
+                    <div className="flex min-w-0 items-start gap-3">
+                      <ProductAvatar
+                        name={item.product.name}
+                        imageUrl={item.product.imageUrl}
+                        categoryName={item.product.categoryName}
+                        size="sm"
+                      />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium leading-tight">{item.product.name}</p>
+                        {item.variant && (
+                          <p className="mt-0.5 text-xs text-muted-foreground">{item.variant.name}</p>
+                        )}
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {item.quantity} x {formatPrice(price)}
+                        </p>
+                      </div>
                     </div>
                     <p className="whitespace-nowrap text-sm font-semibold">
                       {formatPrice(price * item.quantity)}

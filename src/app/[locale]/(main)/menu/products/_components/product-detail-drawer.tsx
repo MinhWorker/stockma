@@ -22,6 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, Trash2 } from 'lucide-react';
 import type { ProductSummary } from '@/services/types';
 import { formatPrice, cn } from '@/lib/utils';
+import { ProductAvatar } from '@/components/data-display/product-avatar';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -83,15 +84,20 @@ export function ProductDetailDrawer({
               <VisuallyHidden><DrawerTitle>{p.name}</DrawerTitle></VisuallyHidden>
               {/* ── Header ── */}
               <div className="px-4 pt-2 pb-3">
-                <h2 className="text-lg font-semibold leading-snug">{p.name}</h2>
-                <div className="mt-1.5 flex items-center justify-between gap-2">
-                  <span className="text-sm text-muted-foreground truncate">{p.categoryName}</span>
-                  <Badge
-                    variant={p.status === 'out_of_stock' ? 'destructive' : 'default'}
-                    className="shrink-0"
-                  >
-                    {p.status === 'active' ? t('statusActive') : t('statusOutOfStock')}
-                  </Badge>
+                <div className="flex items-center gap-3">
+                  <ProductAvatar name={p.name} imageUrl={p.imageUrl} categoryName={p.categoryName} size="lg" />
+                  <div className="min-w-0 flex-1">
+                    <h2 className="truncate text-lg font-semibold leading-snug">{p.name}</h2>
+                    <div className="mt-1.5 flex items-center justify-between gap-2">
+                      <span className="truncate text-sm text-muted-foreground">{p.categoryName}</span>
+                      <Badge
+                        variant={p.status === 'out_of_stock' ? 'destructive' : 'default'}
+                        className="shrink-0"
+                      >
+                        {p.status === 'active' ? t('statusActive') : t('statusOutOfStock')}
+                      </Badge>
+                    </div>
+                  </div>
                 </div>
               </div>
 

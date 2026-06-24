@@ -9,6 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatPrice } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
 import type { OrderItem, OrderGlobalFields } from '../_context/order-context';
+import { ProductAvatar } from '@/components/data-display/product-avatar';
 
 interface Props {
   open: boolean;
@@ -44,15 +45,23 @@ export function OrderConfirmationDialog({
               {items.map((item) => {
                 const price = item.salePrice ? Number(item.salePrice) : (item.variant?.effectivePrice ?? item.product.price);
                 return (
-                  <div key={item.key} className="p-3 flex justify-between items-start gap-3 bg-card">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium leading-tight mb-1">{item.product.name}</p>
-                      {item.variant && (
-                        <p className="text-xs text-muted-foreground mb-1">{item.variant.name}</p>
-                      )}
-                      <p className="text-xs text-muted-foreground">
-                        {item.quantity} x {formatPrice(price)}
-                      </p>
+                  <div key={item.key} className="flex items-start justify-between gap-3 bg-card p-3">
+                    <div className="flex min-w-0 items-start gap-3">
+                      <ProductAvatar
+                        name={item.product.name}
+                        imageUrl={item.product.imageUrl}
+                        categoryName={item.product.categoryName}
+                        size="sm"
+                      />
+                      <div className="min-w-0">
+                        <p className="mb-1 text-sm font-medium leading-tight">{item.product.name}</p>
+                        {item.variant && (
+                          <p className="mb-1 text-xs text-muted-foreground">{item.variant.name}</p>
+                        )}
+                        <p className="text-xs text-muted-foreground">
+                          {item.quantity} x {formatPrice(price)}
+                        </p>
+                      </div>
                     </div>
                     <p className="text-sm font-semibold whitespace-nowrap">
                       {formatPrice(price * item.quantity)}

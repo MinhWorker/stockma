@@ -35,6 +35,7 @@ export interface OverviewReport {
 export interface ProductReportRow {
   productId: number;
   productName: string;
+  imageUrl: string | null;
   categoryName: string;
   stockQty: number;
   stockValue: number;
@@ -57,6 +58,7 @@ export interface ProviderReportRow {
 export interface StockMovementRow {
   productId: number;
   productName: string;
+  imageUrl: string | null;
   stockInQty: number;
   stockOutQty: number;
   adjustmentQty: number;
@@ -216,7 +218,7 @@ export async function getProductReport(filters: ReportFilters): Promise<ProductR
 
   const products = await prisma.product.findMany({
     where: inventoryId ? { inventoryId } : undefined,
-    select: { id: true, name: true, costPrice: true, category: { select: { name: true } } },
+    select: { id: true, name: true, imageUrl: true, costPrice: true, category: { select: { name: true } } },
     orderBy: { name: 'asc' },
   });
 
@@ -274,6 +276,7 @@ export async function getProductReport(filters: ReportFilters): Promise<ProductR
     return {
       productId: p.id,
       productName: p.name,
+      imageUrl: p.imageUrl,
       categoryName: p.category.name,
       stockQty,
       stockValue: stockQty * p.costPrice,
@@ -350,7 +353,7 @@ export async function getStockMovementReport(filters: ReportFilters): Promise<St
 
   const products = await prisma.product.findMany({
     where: inventoryId ? { inventoryId } : undefined,
-    select: { id: true, name: true },
+    select: { id: true, name: true, imageUrl: true },
     orderBy: { name: 'asc' },
   });
 
@@ -378,6 +381,7 @@ export async function getStockMovementReport(filters: ReportFilters): Promise<St
       return {
         productId: p.id,
         productName: p.name,
+        imageUrl: p.imageUrl,
         stockInQty,
         stockOutQty,
         adjustmentQty,

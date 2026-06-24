@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { FormField } from '@/components/forms/form-field';
 import { SegmentedSelect } from '@/components/forms/segmented-select';
 import { PriceInput } from '@/components/forms/price-input';
-import { ProductCombobox } from '@/components/forms/product-combobox';
+import { ProductPickerPanel } from '@/components/forms/product-picker-panel';
 import {
   Combobox,
   ComboboxInput,
@@ -253,15 +253,12 @@ export function StockOutClient() {
 
         {/* Product selector */}
         <FormField label={t('form.product')} required error={errors.productId}>
-          <ProductCombobox
+          <ProductPickerPanel
             products={products}
             productId={productId}
             productSearch={productSearch}
             onProductChange={handleProductChange}
-            onSearchChange={(s) => {
-              setProductSearch(s);
-              if (!s) handleProductChange(0);
-            }}
+            onSearchChange={setProductSearch}
             isLoading={isLoadingProducts}
             error={!!errors.productId}
           />
@@ -357,10 +354,6 @@ export function StockOutClient() {
               const giftProduct = products.find((p) => p.id === gift.productId);
               const giftHasVariants = (giftProduct?.variants?.length ?? 0) > 0;
               const giftVariant = giftProduct?.variants?.find((v) => v.id === gift.variantId);
-              const giftProductInputValue =
-                gift.productId && !gift.productSearch
-                  ? (giftProduct?.name ?? '')
-                  : gift.productSearch;
               const filteredGiftVariants = gift.variantSearch
                 ? (giftProduct?.variants ?? []).filter((v) =>
                     v.name.toLowerCase().includes(gift.variantSearch.toLowerCase())
@@ -386,41 +379,21 @@ export function StockOutClient() {
                       <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
-                  <Combobox
-                    value={gift.productId || null}
-                    onValueChange={(v) =>
+                  <ProductPickerPanel
+                    products={products}
+                    productId={gift.productId}
+                    productSearch={gift.productSearch}
+                    placeholder="Chọn sản phẩm tặng"
+                    onProductChange={(v) =>
                       updateGift(gift.id, {
-                        productId: v as number,
+                        productId: v,
                         productSearch: '',
                         variantId: undefined,
                         variantSearch: '',
                       })
                     }
-                  >
-                    <ComboboxInput
-                      placeholder="Chọn sản phẩm tặng..."
-                      value={giftProductInputValue}
-                      onChange={(e) => {
-                        updateGift(gift.id, { productSearch: e.target.value });
-                        if (!e.target.value) updateGift(gift.id, { productId: 0 });
-                      }}
-                    />
-                    <ComboboxContent>
-                      <ComboboxList>
-                        <ComboboxEmpty>{tCommon('noResults')}</ComboboxEmpty>
-                        {(gift.productSearch
-                          ? products.filter((p) =>
-                              p.name.toLowerCase().includes(gift.productSearch.toLowerCase())
-                            )
-                          : products
-                        ).map((p) => (
-                          <ComboboxItem key={p.id} value={p.id}>
-                            <span className="flex-1 truncate">{p.name}</span>
-                          </ComboboxItem>
-                        ))}
-                      </ComboboxList>
-                    </ComboboxContent>
-                  </Combobox>
+                    onSearchChange={(search) => updateGift(gift.id, { productSearch: search })}
+                  />
                   {giftHasVariants && (
                     <Combobox
                       value={gift.variantId ?? null}

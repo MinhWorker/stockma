@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { Search, X, Check, PackagePlus, ChevronDown, ChevronUp } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn, formatPrice } from '@/lib/utils';
+import { ProductAvatar } from '@/components/data-display/product-avatar';
 import type { ProductSummary } from '@/services/types';
 import {
   makeBulkStockInKey,
@@ -132,9 +133,7 @@ export function BulkStockInCatalog({ products }: Props) {
                   )}
                 </div>
 
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted text-sm font-bold text-muted-foreground">
-                  {product.categoryName.slice(0, 2).toUpperCase()}
-                </div>
+                <ProductAvatar name={product.name} imageUrl={product.imageUrl} categoryName={product.categoryName} />
 
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium leading-tight">{product.name}</p>

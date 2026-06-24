@@ -11,6 +11,7 @@ export type ProductFormValues = {
   inventoryId: number;
   description: string;
   unit: string;
+  imageUrl: string;
 };
 
 export type ProductFormErrors = Partial<Record<keyof ProductFormValues, string>>;

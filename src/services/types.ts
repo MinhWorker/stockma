@@ -60,7 +60,7 @@ export interface CreateProductInput {
   name: string;
   shortDescription?: string;
   description?: string;
-  imageUrl?: string;
+  imageUrl?: string | null;
   brand?: string;
   costPrice: number;
   price: number;

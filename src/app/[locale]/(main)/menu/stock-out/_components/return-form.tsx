@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { FormField } from '@/components/forms/form-field';
 import { PriceInput } from '@/components/forms/price-input';
-import { ProductCombobox } from '@/components/forms/product-combobox';
+import { ProductPickerPanel } from '@/components/forms/product-picker-panel';
 import { createReturnAction } from '@/actions/return.action';
 import { getErrorKey } from '@/lib/error-message';
 import { useWithLoading } from '@/components/feedback/loading-overlay';
@@ -124,15 +124,12 @@ export function ReturnForm() {
     <div className="space-y-4 px-4 py-4" inert={isSubmitting || undefined}>
       {/* Product */}
       <FormField label="Sản phẩm" required error={errors.productId}>
-        <ProductCombobox
+        <ProductPickerPanel
           products={products}
           productId={productId}
           productSearch={productSearch}
           onProductChange={handleProductChange}
-          onSearchChange={(s) => {
-            setProductSearch(s);
-            if (!s) handleProductChange(0);
-          }}
+          onSearchChange={setProductSearch}
           isLoading={isLoadingProducts}
           error={!!errors.productId}
         />

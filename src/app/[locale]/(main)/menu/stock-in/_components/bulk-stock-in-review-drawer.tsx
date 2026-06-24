@@ -20,6 +20,7 @@ import { useWithLoading } from '@/components/feedback/loading-overlay';
 import { formatPrice, cn } from '@/lib/utils';
 import { useBulkStockIn } from '../_context/bulk-stock-in-context';
 import { BulkStockInConfirmationDialog } from './bulk-stock-in-confirmation-dialog';
+import { ProductAvatar } from '@/components/data-display/product-avatar';
 
 export function BulkStockInReviewDrawer() {
   const tCommon = useTranslations('common');
@@ -115,14 +116,22 @@ export function BulkStockInReviewDrawer() {
                 return (
                   <div key={item.key} className="space-y-3 rounded-xl border border-border bg-card p-3">
                     <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium">{item.product.name}</p>
-                        {item.variant && (
-                          <p className="text-xs text-muted-foreground">{item.variant.name}</p>
-                        )}
-                        <p className="text-xs text-muted-foreground">
-                          Tồn hiện tại: {item.variant?.stockQty ?? item.product.stockQty}
-                        </p>
+                      <div className="flex min-w-0 items-start gap-3">
+                        <ProductAvatar
+                          name={item.product.name}
+                          imageUrl={item.product.imageUrl}
+                          categoryName={item.product.categoryName}
+                          size="sm"
+                        />
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">{item.product.name}</p>
+                          {item.variant && (
+                            <p className="text-xs text-muted-foreground">{item.variant.name}</p>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            Tồn hiện tại: {item.variant?.stockQty ?? item.product.stockQty}
+                          </p>
+                        </div>
                       </div>
                       <button
                         type="button"

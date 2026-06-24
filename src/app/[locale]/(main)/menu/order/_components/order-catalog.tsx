@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { Search, X, Check, ShoppingCart, ChevronDown, ChevronUp } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { cn, formatPrice } from '@/lib/utils';
+import { ProductAvatar } from '@/components/data-display/product-avatar';
 import type { ProductSummary } from '@/services/types';
 import { useOrder, makeKey } from '../_context/order-context';
 import { OrderReviewDrawer } from '@/app/[locale]/(main)/menu/order/_components/order-review-drawer';
@@ -125,9 +126,7 @@ export function OrderCatalog({ products }: Props) {
                   )}
                 </div>
 
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted text-sm font-bold text-muted-foreground">
-                  {p.categoryName.slice(0, 2).toUpperCase()}
-                </div>
+                <ProductAvatar name={p.name} imageUrl={p.imageUrl} categoryName={p.categoryName} />
 
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium leading-tight">{p.name}</p>

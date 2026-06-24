@@ -27,6 +27,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { PriceInput } from '@/components/forms/price-input';
 import { FormField } from '@/components/forms/form-field';
 import { MobileSelectSheet } from '@/components/forms/mobile-select-sheet';
+import { ProductPhotoField } from '@/components/forms/product-photo-field';
 import {
   createProductAction,
   updateProductAction,
@@ -51,6 +52,7 @@ interface FormValues {
   inventoryId: number;
   description: string;
   unit: string;
+  imageUrl: string;
 }
 type Errors = Partial<Record<keyof FormValues, string>>;
 
@@ -79,7 +81,7 @@ let tempIdCounter = -1;
 function nextTempId() { return tempIdCounter--; }
 
 function empty(): FormValues {
-  return { name: '', costPrice: 0, price: 0, categoryId: 0, providerId: 0, inventoryId: 0, description: '', unit: '' };
+  return { name: '', costPrice: 0, price: 0, categoryId: 0, providerId: 0, inventoryId: 0, description: '', unit: '', imageUrl: '' };
 }
 function fromProduct(p: ProductSummary): FormValues {
   return {
@@ -91,6 +93,7 @@ function fromProduct(p: ProductSummary): FormValues {
     inventoryId: p.inventoryId,
     description: p.shortDescription ?? '',
     unit: p.unit ?? '',
+    imageUrl: p.imageUrl ?? '',
   };
 }
 function emptyVariantForm(): VariantFormState {
@@ -235,6 +238,7 @@ export function MobileProductFormDrawer({ open, onOpenChange, product, onSuccess
               inventoryId: values.inventoryId,
               shortDescription: values.description,
               unit: values.unit || undefined,
+              imageUrl: values.imageUrl || null,
             })
           : await createProductAction({
               name: values.name,
@@ -245,6 +249,7 @@ export function MobileProductFormDrawer({ open, onOpenChange, product, onSuccess
               inventoryId: values.inventoryId,
               shortDescription: values.description,
               unit: values.unit || undefined,
+              imageUrl: values.imageUrl || undefined,
             });
 
         if (!productResult.success) {
@@ -409,6 +414,12 @@ export function MobileProductFormDrawer({ open, onOpenChange, product, onSuccess
                 disabled={isSubmitting}
               />
             </FormField>
+            <ProductPhotoField
+              value={values.imageUrl}
+              productName={values.name}
+              disabled={isSubmitting}
+              onChange={(url) => set('imageUrl', url)}
+            />
             <div className="grid grid-cols-2 gap-3">
               <FormField label={t('form.costPrice')} required={!hasVariants} error={errors.costPrice} htmlFor={costId}>
                 <PriceInput id={costId} value={values.costPrice || ''} onChange={(v: number) => set('costPrice', v)} aria-invalid={!!errors.costPrice} disabled={hasVariants} className={hasVariants ? 'opacity-50 cursor-not-allowed' : ''} onFocus={scrollOnFocus} />

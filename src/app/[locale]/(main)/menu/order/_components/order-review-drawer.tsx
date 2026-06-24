@@ -26,6 +26,7 @@ import { getErrorKey } from '@/lib/error-message';
 import { useWithLoading } from '@/components/feedback/loading-overlay';
 import { formatPrice, cn } from '@/lib/utils';
 import type { StockOutType } from '@/services/types';
+import { ProductAvatar } from '@/components/data-display/product-avatar';
 
 import { OrderConfirmationDialog } from './order-confirmation-dialog';
 
@@ -214,14 +215,22 @@ export function OrderReviewDrawer() {
                     className="rounded-xl border border-border bg-card p-3 space-y-3"
                   >
                     <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium truncate">{item.product.name}</p>
-                        {item.variant && (
-                          <p className="text-xs text-muted-foreground">{item.variant.name}</p>
-                        )}
-                        <p className="text-xs text-muted-foreground">
-                          {formatPrice(effectivePrice)}
-                        </p>
+                      <div className="flex min-w-0 items-start gap-3">
+                        <ProductAvatar
+                          name={item.product.name}
+                          imageUrl={item.product.imageUrl}
+                          categoryName={item.product.categoryName}
+                          size="sm"
+                        />
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">{item.product.name}</p>
+                          {item.variant && (
+                            <p className="text-xs text-muted-foreground">{item.variant.name}</p>
+                          )}
+                          <p className="text-xs text-muted-foreground">
+                            {formatPrice(effectivePrice)}
+                          </p>
+                        </div>
                       </div>
                       <button
                         onClick={() => actions.removeItem(item.key)}

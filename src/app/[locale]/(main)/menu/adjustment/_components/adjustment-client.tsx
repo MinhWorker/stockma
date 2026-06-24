@@ -21,7 +21,7 @@ import {
   ComboboxItem,
   ComboboxEmpty,
 } from '@/components/ui/combobox';
-import { ProductCombobox } from '@/components/forms/product-combobox';
+import { ProductPickerPanel } from '@/components/forms/product-picker-panel';
 import { AdjustmentInput } from '@/components/forms/adjustment-input';
 import { useTransactionForm } from '../../_hooks/use-transaction-form';
 import { cn } from '@/lib/utils';
@@ -34,7 +34,7 @@ export function AdjustmentClient() {
     done,
     products,
     productSearch,
-    handleProductSearch,
+    setProductSearch,
     selectedProduct,
     hasVariants,
     selectedVariant,
@@ -95,12 +95,12 @@ export function AdjustmentClient() {
     <>
       <div className="space-y-4 px-4 py-4" inert={isSubmitting || undefined}>
         <FormField label={t('form.product')} required error={errors.productId}>
-          <ProductCombobox
+          <ProductPickerPanel
             products={products}
             productId={values.productId}
             productSearch={productSearch}
-            onProductChange={(v) => { set('productId', v); set('variantId', undefined); setVariantSearch(''); }}
-            onSearchChange={handleProductSearch}
+            onProductChange={(v) => { set('productId', v); set('variantId', undefined); setProductSearch(''); setVariantSearch(''); }}
+            onSearchChange={setProductSearch}
             error={!!errors.productId}
           />
           {selectedProduct && (

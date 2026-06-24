@@ -30,6 +30,7 @@ import { ProductFormHeader } from './product-form-header';
 import { ProductBasicFields } from './product-basic-fields';
 import { ProductPricingFields } from './product-pricing-fields';
 import { ProductVariantsSection } from './product-variants-section';
+import { ProductPhotoField } from '@/components/forms/product-photo-field';
 import { ConfirmDialog } from '@/components/feedback/confirm-dialog';
 import { PageTransition } from '@/components/page-transition';
 import { useNavigationGuard } from '@/components/navigation-guard';
@@ -56,7 +57,7 @@ let tempIdCounter = -1;
 function nextTempId() { return tempIdCounter--; }
 
 function emptyValues(): ProductFormValues {
-  return { name: '', costPrice: 0, price: 0, categoryId: 0, providerId: 0, inventoryId: 0, description: '', unit: '' };
+  return { name: '', costPrice: 0, price: 0, categoryId: 0, providerId: 0, inventoryId: 0, description: '', unit: '', imageUrl: '' };
 }
 
 function valuesFromProduct(p: ProductSummary): ProductFormValues {
@@ -69,6 +70,7 @@ function valuesFromProduct(p: ProductSummary): ProductFormValues {
     inventoryId: p.inventoryId,
     description: p.shortDescription ?? '',
     unit: p.unit ?? '',
+    imageUrl: p.imageUrl ?? '',
   };
 }
 
@@ -331,6 +333,7 @@ export function ProductFormPage({ product }: Props) {
               providerId: values.providerId,
               inventoryId: values.inventoryId,
               shortDescription: values.description,
+              imageUrl: values.imageUrl || null,
             })
           : await createProductAction({
               name: values.name,
@@ -341,6 +344,7 @@ export function ProductFormPage({ product }: Props) {
               inventoryId: values.inventoryId,
               shortDescription: values.description,
               unit: variantMode ? undefined : (values.unit || undefined),
+              imageUrl: values.imageUrl || undefined,
             });
 
         if (!productResult.success) {
@@ -451,6 +455,13 @@ export function ProductFormPage({ product }: Props) {
           onAddCategory={handleAddCategory}
           onAddProvider={handleAddProvider}
           onGoToSettings={handleGoToSettings}
+        />
+
+        <ProductPhotoField
+          value={values.imageUrl}
+          productName={values.name}
+          disabled={isSubmitting}
+          onChange={(url) => handleFieldChange('imageUrl', url)}
         />
 
         {/* Pricing — hidden when variant mode is on */}

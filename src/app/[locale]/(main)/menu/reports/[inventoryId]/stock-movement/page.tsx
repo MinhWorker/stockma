@@ -5,6 +5,7 @@ import { getAccountingPeriods } from '@/services/accounting-period.service';
 import { ReportFilters } from '../_components/report-filters';
 import { InventoryBadge } from '../_components/inventory-badge';
 import { formatPrice } from '@/lib/utils';
+import { ProductAvatar } from '@/components/data-display/product-avatar';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,7 +62,10 @@ async function StockMovementData({ inventoryId, dateFrom, dateTo, accountingPeri
       <div className="rounded-2xl border border-border overflow-hidden divide-y divide-border/60 bg-card">
         {rows.map((row) => (
           <div key={row.productId} className="px-4 py-3 space-y-1.5">
-            <p className="text-sm font-medium truncate">{row.productName}</p>
+            <div className="flex items-center gap-3">
+              <ProductAvatar name={row.productName} imageUrl={row.imageUrl} size="sm" />
+              <p className="min-w-0 flex-1 truncate text-sm font-medium">{row.productName}</p>
+            </div>
             <div className="flex gap-3 text-xs">
               <span className="text-emerald-600 dark:text-emerald-400">+{row.stockInQty} {t('stockIn')}</span>
               <span className="text-rose-600 dark:text-rose-400">-{row.stockOutQty} {t('stockOut')}</span>

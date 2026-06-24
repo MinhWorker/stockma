@@ -19,6 +19,11 @@ async function isVisible(page, text) {
     .catch(() => false);
 }
 
+async function gotoReady(page, url) {
+  await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 });
+  await page.locator('body').waitFor({ state: 'visible', timeout: 15000 });
+}
+
 async function assertVisible(page, text, label) {
   if (!(await isVisible(page, text))) {
     throw new Error(`${label}: expected to find visible text "${text}"`);
@@ -44,7 +49,7 @@ async function capture(page, name) {
 }
 
 async function login(page, rootUrl) {
-  await page.goto(`${rootUrl}/vi/login`, { waitUntil: 'networkidle', timeout: 45000 });
+  await gotoReady(page, `${rootUrl}/vi/login`);
   await page.locator('input[type="email"], input[name="email"]').first().fill(email);
   await page.locator('input[type="password"], input[name="password"]').first().fill(password);
   await page.locator('button[type="submit"]').first().click();
@@ -58,14 +63,14 @@ async function login(page, rootUrl) {
 }
 
 async function verifyStockIn(page, rootUrl, results) {
-  await page.goto(`${rootUrl}/vi/menu/stock-in`, { waitUntil: 'networkidle', timeout: 45000 });
+  await gotoReady(page, `${rootUrl}/vi/menu/stock-in`);
   await capture(page, 'stock-in');
   await assertVisible(page, 'Ghi nhận nhập kho', 'stock-in CTA');
   results.push({ flow: 'stock-in', ok: true });
 }
 
 async function verifyStockOut(page, rootUrl, results) {
-  await page.goto(`${rootUrl}/vi/menu/stock-out`, { waitUntil: 'networkidle', timeout: 45000 });
+  await gotoReady(page, `${rootUrl}/vi/menu/stock-out`);
   await assertVisible(page, 'Xem lại phiếu xuất', 'stock-out review CTA');
 
   await clickFirstVisible(page, ['Bán lẻ', 'Ban le']);
@@ -78,7 +83,7 @@ async function verifyStockOut(page, rootUrl, results) {
 }
 
 async function verifyReturnTab(page, rootUrl, results) {
-  await page.goto(`${rootUrl}/vi/menu/stock-out`, { waitUntil: 'networkidle', timeout: 45000 });
+  await gotoReady(page, `${rootUrl}/vi/menu/stock-out`);
   await clickFirstVisible(page, ['Đổi trả']);
   await page.waitForTimeout(500);
   await capture(page, 'return-exchange');
