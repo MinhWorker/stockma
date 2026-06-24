@@ -25,6 +25,8 @@ async function gotoReady(page, url) {
 }
 
 async function assertVisible(page, text, label) {
+  const locator = page.getByText(text, { exact: false }).first();
+  await locator.waitFor({ state: 'visible', timeout: 20000 }).catch(() => {});
   if (!(await isVisible(page, text))) {
     throw new Error(`${label}: expected to find visible text "${text}"`);
   }
