@@ -77,7 +77,7 @@ export function StockOutClient() {
 
   const [quantity, setQuantity] = useState<number>(1);
   const [note, setNote] = useState('');
-  const [stockOutType, setStockOutType] = useState<StockOutType | ''>('');
+  const [stockOutType, setStockOutType] = useState<StockOutType | ''>('retail');
   const [salePrice, setSalePrice] = useState('');
 
   // Gift items

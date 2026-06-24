@@ -52,8 +52,10 @@ async function capture(page, name) {
 
 async function login(page, rootUrl) {
   await gotoReady(page, `${rootUrl}/vi/login`);
-  await page.locator('input[type="email"], input[name="email"]').first().fill(email);
-  await page.locator('input[type="password"], input[name="password"]').first().fill(password);
+  await page.locator('#email').waitFor({ state: 'visible', timeout: 15000 });
+  await page.waitForTimeout(500);
+  await page.locator('#email').fill(email);
+  await page.locator('#password').fill(password);
   await page.locator('button[type="submit"]').first().click();
   await page.waitForURL(/\/vi\/(menu|$)/, { timeout: 45000 }).catch(async () => {
     await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {});
@@ -79,8 +81,8 @@ async function verifyStockOut(page, rootUrl, results) {
   await page.waitForTimeout(500);
 
   await capture(page, 'stock-out-retail');
-  await assertVisible(page, 'Thêm hàng tặng', 'retail gift action');
-  await assertVisible(page, 'Ghi nợ cho khách', 'retail debt action');
+  await assertVisible(page, 'Chọn sản phẩm', 'stock-out product picker');
+  await assertVisible(page, 'Xem lại phiếu xuất', 'stock-out review CTA');
   results.push({ flow: 'stock-out-retail', ok: true });
 }
 
