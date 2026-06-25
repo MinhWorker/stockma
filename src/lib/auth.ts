@@ -2,6 +2,12 @@ import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { prisma } from './db';
 
+const vercelDeploymentUrl = process.env.VERCEL_URL
+  ? `https://${process.env.VERCEL_URL.replace(/^https?:\/\//, '')}`
+  : undefined;
+
+const isTrustedOrigin = (origin: string | undefined): origin is string => Boolean(origin);
+
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL!,
   database: prismaAdapter(prisma, { provider: 'postgresql' }),
@@ -16,7 +22,9 @@ export const auth = betterAuth({
   trustedOrigins: [
     process.env.BETTER_AUTH_URL!,
     process.env.NEXT_PUBLIC_APP_URL!,
-  ].filter(Boolean),
+    vercelDeploymentUrl,
+    'https://stockma-*-minhnks-projects.vercel.app',
+  ].filter(isTrustedOrigin),
 });
 
 export type Session = typeof auth.$Infer.Session;
